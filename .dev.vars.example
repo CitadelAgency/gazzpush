@@ -1,0 +1,57 @@
+# Copie para .dev.vars (local). Em produção: `wrangler secret put NOME`.
+PUBLIC_BASE_URL=http://localhost:8787
+CF_ACCOUNT_ID=<SEU_ACCOUNT_ID>
+AI_GATEWAY_ID=redacao
+DEEPSEEK_API_KEY=
+# DEEPSEEK_URL=
+# Segunda opinião e desvio por tema (opcional; sem ela a conferência tem uma opinião só). Passa pelo AI Gateway.
+ANTHROPIC_API_KEY=
+# Opcional: claude-opus-5-5 (padrão) ou claude-haiku-5-5.
+# SEGUNDA_MODELO=
+# SEGUNDA_URL=
+# Escudo jurídico (opcionais). E-mail de saída do pedido de outro lado (com o binding send_email "EMAIL" no
+# wrangler.jsonc e o domínio no Cloudflare Email Service); sem ele, o pedido é copiado e mandado por fora.
+# EMAIL_REMETENTE=
+# Chaves S3 do archive.org (Save Page Now com limite maior); sem elas, o Wayback público.
+# WAYBACK_ACCESS_KEY=
+# WAYBACK_SECRET=
+# Autoridade de carimbo de tempo RFC 3161 (padrão https://freetsa.org/tsr).
+# TSA_URL=
+# Raiz confiável da autoridade acima (certificado DER em base64). Obrigatória com outra TSA_URL; a da FreeTSA vem no código.
+# TSA_RAIZ=
+# WAYBACK_URL=
+# BUSCA_VETORIAL=desligada usa apenas a busca por palavra.
+# BUSCA_VETORIAL=
+# WHISPER_URL=
+# Matéria viva (opcional): a chave pública da API do DataJud (CNJ), publicada em
+# https://datajud-wiki.cnj.jus.br/api-publica/acesso (o CNJ pode trocar). Sem ela, os processos do texto não são acompanhados.
+# DATAJUD_API_KEY=
+# DATAJUD_URL=
+XAI_API_KEY=
+# Chaves opcionais do servidor. Cada veículo também pode cadastrar suas chaves no app.
+GEMINI_API_KEY=
+KIE_API_KEY=
+FAL_KEY=
+# Gere um segredo aleatório exclusivo para cifrar os tokens e as chaves de IA dos veículos.
+TOKEN_ENC_KEY=
+# Auth (Better Auth). Segredo: node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+BETTER_AUTH_SECRET=
+# Login Google (opcional; sem ele só e-mail/senha). Redirect: <PUBLIC_BASE_URL>/api/auth/callback/google
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+# Google Docs (opcional; com as quatro Google aparece "Conectar Google Docs"). Passo a passo no README, "Google Docs".
+GOOGLE_API_KEY=
+GOOGLE_PROJECT_NUMBER=
+# user.id (vírgula) com acesso a /api/admin/* (id, não e-mail: o cadastro não verifica e-mail)
+ADMIN_USER_IDS=
+
+# Reels no Windows (o wrangler dev não sobe container): o Container do Reels no docker run (README, Reels).
+# REELS_URL_LOCAL=http://localhost:8080
+
+# Cobrança (opcional; com as quatro a aba Plano assina e gerencia; sem elas, diz que não está configurada e o resto segue igual).
+# Passo a passo no README, seção Preço por veículo.
+# STRIPE_SECRET_KEY=
+# STRIPE_WEBHOOK_SECRET=
+# STRIPE_PRECO_PAGINA=
+# STRIPE_PRECO_PORTAL=
+# STRIPE_URL=

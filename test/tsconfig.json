@@ -1,0 +1,25 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "@types/node",
+      "@cloudflare/vitest-plugin/types",
+      "vite/client"
+    ],
+    "jsx": "react-jsx",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ]
+  },
+  "include": [
+    "./**/*.ts",
+    "../src/**/*.ts",
+    "../web/src/kit/**/*.ts",
+    "../web/src/kit/**/*.tsx",
+    "../worker-configuration.d.ts",
+    "../web/src/novo/municipios.ts",
+    "../web/src/novo/previa.ts",
+    "../web/src/dados/**/*.ts"
+  ]
+}

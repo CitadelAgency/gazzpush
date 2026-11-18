@@ -1,0 +1,23 @@
+node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+!.env.example
+dist/
+*.log
+# gerado: npm run types
+worker-configuration.d.ts
+
+# fusion (mapas e relatórios locais)
+.fusion/
+
+# pesquisa (deep research)
+research_notes/
+reports/
+
+# trabalho local (originais de imagens geradas, logs da noite)
+.work/
+test-results/

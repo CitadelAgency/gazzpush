@@ -1,0 +1,23 @@
+/* Traços de lápis (Lapis.tsx). O CSS dá a caixa; o componente mede e desenha o traço 1:1 dentro dela.
+   --lapis-dur e --lapis-atraso ajustam o traçado; o padrão é 300 ms, saída suave (pedido do dono em 10/11; eram 700). */
+.lapis { display: block; overflow: visible; pointer-events: none; }
+.lapis path { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+
+/* Volta: cobre o pai (que tem position: relative), com folga para o risco passar do texto. */
+.lapis-volta { position: absolute; inset: -2px -8px -2px -6px; width: calc(100% + 14px); height: calc(100% + 4px); }
+/* Sublinhado: colado na base do pai, da largura dele. */
+.lapis-sublinhado { position: absolute; left: -2px; right: -2px; bottom: -7px; width: calc(100% + 4px); height: 10px; }
+/* Risco que corta a nota resolvida: o sublinhado na altura do meio do texto. */
+.lapis-sublinhado.lapis-risco { top: calc(50% - 5px); bottom: auto; --lapis-dur: 300ms; }
+/* Visto: tamanho de ícone; o pai decide (width/height) quando precisar. */
+.lapis-visto { width: 22px; height: 20px; flex: none; }
+
+.lapis--desenhar path {
+  animation: lapis-desenha var(--lapis-dur, 300ms) cubic-bezier(.2, .8, .2, 1) var(--lapis-atraso, 0ms) both;
+}
+.lapis-visto.lapis--desenhar path { animation-duration: var(--lapis-dur, 300ms); }
+@keyframes lapis-desenha { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lapis--desenhar path { animation: none; }
+}

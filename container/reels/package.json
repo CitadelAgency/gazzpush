@@ -1,0 +1,10 @@
+{
+  "name": "redacao-reels-container",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Container do Reels: recebe a composição HyperFrames (HTML dos cards 9:16) e devolve o MP4.",
+  "dependencies": {
+    "gsap": "3.13.0",
+    "hyperframes": "0.9.67"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "redacao",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "vars": { "INSTALACAO_PROPRIA": "1" },
+
+  // Domínio próprio: descomente e troque pelo seu. Sem ele, o app sobe no workers.dev. Cookie e CSRF são da origem
+  // de PUBLIC_BASE_URL, então só um host deve servir o app.
+  // "routes": [{ "pattern": "<SEU_DOMINIO>", "custom_domain": true }],
+  // "workers_dev": false,
+
+  // UI (Vite + React em web/, "npm run web:build"). API, mídia e health passam pelo Worker; o resto é arquivo
+  // estático, e rota desconhecida devolve o index.html da SPA.
+  "assets": {
+    "directory": "web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/media/*", "/health", "/fontes/*", "/anuncio/*", "/v/*", "/stripe/*"]
+  },
+
+  // Template do card e fontes entram no bundle: render sem request externo.
+  "rules": [
+    { "type": "Text", "globs": ["**/*.html"], "fallthrough": true },
+    { "type": "Data", "globs": ["**/*.woff2"], "fallthrough": true }
+  ],
+
+  // Monitor: a cada 15 min enfileira as fontes vencidas.
+  "triggers": { "crons": ["*/15 * * * *", "0 9 * * *", "0 21 * * *"] },
+
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "redacao-db",
+    "database_id": "<D1_DATABASE_ID>",
+    "migrations_dir": "migrations"
+  }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "redacao-media" }],
+  "kv_namespaces": [{ "binding": "CONFIG", "id": "<KV_NAMESPACE_ID>" }],
+  "queues": {
+    "producers": [{ "binding": "MONITOR_QUEUE", "queue": "redacao-monitor" }],
+    "consumers": [{
+      "queue": "redacao-monitor",
+      "max_batch_size": 10,
+      "max_batch_timeout": 5,
+      "max_retries": 3,
+      "dead_letter_queue": "redacao-monitor-dlq"
+    }]
+  },
+  // Dois Workflows curtos, sem waitForEvent: produção termina em revisão; a aprovação cria a publicação.
+  "workflows": [
+    { "name": "redacao-producao", "binding": "PRODUCAO_WORKFLOW", "class_name": "ProducaoWorkflow" },
+    { "name": "redacao-publicacao", "binding": "PUBLICACAO_WORKFLOW", "class_name": "PublicacaoWorkflow" }
+  ],
+  // Reels (Fase 4): HyperFrames + Chrome sem tela + FFmpeg num Cloudflare Container (container/reels/), atrás do
+  // Durable Object ReelsContainer. Exige plano Workers Paid e Docker na máquina do deploy (README, Reels). Local: o
+  // `wrangler dev` não sobe container no Windows, então fica desligado aqui; com `REELS_URL_LOCAL` no .dev.vars o
+  // Worker manda o pedido ao mesmo container rodando no `docker run` (README). No Linux/WSL: `--enable-containers`.
+  "dev": { "enable_containers": false },
+  "containers": [{
+    "class_name": "ReelsContainer",
+    "image": "./container/reels/Dockerfile",
+    "instance_type": "standard-3",
+    "max_instances": 3
+  }],
+  "durable_objects": { "bindings": [{ "name": "REELS", "class_name": "ReelsContainer" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReelsContainer"] }],
+  // remote: true → em `wrangler dev` o binding fala com o serviço real (não há emulação local).
+  "ai": { "binding": "AI", "remote": true },
+  "browser": { "binding": "BROWSER", "remote": true },
+  "vectorize": [
+    { "binding": "DEDUPE", "index_name": "redacao-dedupe", "remote": true },
+    // Pergunte ao documento (Matéria, Fase 5): bge-m3, 1024 dimensões, cosseno; um namespace por arquivo.
+    { "binding": "DOCS_VETOR", "index_name": "redacao-documentos", "remote": true }
+  ],
+  "analytics_engine_datasets": [{ "binding": "METRICS", "dataset": "redacao_metrics" }]
+}

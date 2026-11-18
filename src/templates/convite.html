@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="{{?LANG}}" class="export {{?FORMAT_CLASS}}">
+<head>
+  <meta charset="utf-8">
+  <title>{{BRAND_NAME}}</title>
+  <style>
+    @font-face { font-family: Corpo; src: url(data:font/woff2;base64,{{FONT_BODY}}) format('woff2'); font-weight: {{?FONT_BODY_WEIGHT}}; font-display: block; }
+    @font-face { font-family: Destaque; src: url(data:font/woff2;base64,{{FONT_DISPLAY}}) format('woff2'); font-weight: {{?FONT_DISPLAY_WEIGHT}}; font-display: block; }
+    :root { color-scheme: dark; --bg: {{COLOR_BG}}; --ink: {{COLOR_INK}}; --accent: {{COLOR_ACCENT}}; --muted: color-mix(in srgb, var(--ink) 72%, var(--bg)); --line: color-mix(in srgb, var(--ink) 18%, var(--bg)); }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #000; font-family: Corpo, sans-serif; }
+    .card { position: relative; width: 1080px; height: 1350px; overflow: hidden; background: var(--bg); color: var(--ink); }
+    .art { position: absolute; left: 0; bottom: 0; width: 1080px; height: 640px; object-fit: cover; object-position: 20% 55%; opacity: .14; }
+    .shade { position: absolute; inset: 0; background: linear-gradient(180deg, var(--bg) 0%, var(--bg) 42%, color-mix(in srgb, var(--bg) 78%, transparent) 62%, color-mix(in srgb, var(--bg) 35%, transparent) 84%, var(--bg) 100%); }
+    header { position: absolute; top: 60px; left: 68px; right: 68px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { line-height: 0; }
+    .brand-mark { display: block; max-width: 220px; height: 100px; object-fit: contain; object-position: left; }
+    .brand-name { font: 900 34px/1 Destaque, sans-serif; letter-spacing: -1px; }
+    .edition { font-size: 24px; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 10px; }
+    .edition svg { width: 30px; height: 30px; }
+    .story { position: absolute; left: 68px; right: 68px; top: 178px; }
+    h1 { font: 900 82px/1.045 Corpo, sans-serif; letter-spacing: -2px; margin: 0; max-width: 930px; text-wrap: balance; }
+    .titulo-destaque h1 { font-family: Destaque, serif; }
+    .support { margin: 28px 0 0; font-size: 32px; line-height: 1.4; color: var(--muted); max-width: 938px; }
+    .features { position: absolute; left: 68px; top: 646px; width: 390px; }
+    .feature-kicker { color: var(--muted); text-transform: uppercase; letter-spacing: 2.1px; font-size: 22px; font-weight: 800; margin: 0 0 22px; }
+    .feature { display: flex; align-items: flex-start; gap: 14px; margin: 0 0 24px; font-size: 29px; font-weight: 800; line-height: 1.25; }
+    .feature svg { width: 34px; height: 34px; flex: none; color: var(--accent); margin-top: 2px; }
+    .phone { position: absolute; left: 505px; top: 622px; width: 513px; height: 800px; border: 13px solid color-mix(in srgb, var(--ink) 35%, var(--bg)); border-radius: 67px; background: color-mix(in srgb, var(--ink) 8%, var(--bg)); box-shadow: inset 0 0 0 4px #000, 0 20px 80px #0008; padding: 12px; transform: rotate(-5deg); }
+    .screen { height: 100%; background: color-mix(in srgb, var(--ink) 12%, var(--bg)); border: 3px solid #000; border-radius: 43px; overflow: hidden; }
+    .speaker { position: absolute; top: 13px; left: 170px; width: 150px; height: 20px; border-radius: 0 0 16px 16px; background: #000; z-index: 2; }
+    .phone-head { display: flex; gap: 16px; align-items: center; padding: 39px 23px 22px; background: color-mix(in srgb, var(--ink) 16%, var(--bg)); border-bottom: 1px solid var(--line); }
+    .avatar { width: 54px; height: 54px; border-radius: 50%; background: var(--accent); color: var(--bg); display: grid; place-items: center; flex: none; font: 900 22px/1 Destaque, sans-serif; }
+    .phone-title { margin: 0; font-size: 27px; font-weight: 900; line-height: 1.2; }
+    .phone-status { color: var(--muted); font-size: 21px; margin: 3px 0 0; }
+    .demo-label { color: var(--muted); text-align: center; font-size: 18px; font-weight: 800; letter-spacing: 1.2px; margin: 22px 0; text-transform: uppercase; }
+    .msg { margin: 0 17px 14px; padding: 20px 22px; border-radius: 18px; font-size: 26px; line-height: 1.3; max-width: 86%; }
+    .msg.morador { background: color-mix(in srgb, var(--ink) 20%, var(--bg)); border-bottom-left-radius: 5px; }
+    .msg.pagina { background: color-mix(in srgb, var(--accent) 28%, var(--bg)); border-bottom-right-radius: 5px; margin-left: auto; }
+    .msg b { display: block; font-size: 19px; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+    .composer { margin: 28px 17px; padding: 15px 21px; border-radius: 28px; background: color-mix(in srgb, var(--ink) 14%, var(--bg)); color: var(--muted); font-size: 23px; }
+    .bottom-shade { position: absolute; left: 0; right: 0; bottom: 0; height: 250px; background: linear-gradient(0deg, var(--bg) 13%, color-mix(in srgb, var(--bg) 93%, transparent) 37%, transparent 100%); }
+    footer { position: absolute; left: 68px; right: 68px; bottom: 54px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    footer p { margin: 0; }
+    footer a { color: inherit; text-decoration: none; }
+    .main-cta { display: flex; gap: 14px; align-items: center; font-size: 33px; line-height: 1.25; font-weight: 900; color: var(--accent); }
+    .handle { display: block; margin-top: 8px; color: var(--muted); font-size: 24px; font-weight: 700; }
+    .domain { color: var(--muted); font-size: 23px; font-weight: 800; white-space: nowrap; }
+    /* Reels (9:16): o convite mais alto, fora da área que a interface do Reels cobre. */
+    .r916 .card { height: 1920px; }
+    .r916 .art { height: 900px; bottom: 300px; }
+    .r916 header { top: 190px; }
+    .r916 .story { top: 310px; right: 150px; }
+    .r916 .features { top: 780px; }
+    .r916 .phone { top: 740px; height: 760px; }
+    .r916 .bottom-shade { bottom: 260px; height: 300px; }
+    .r916 footer { bottom: 300px; right: 150px; }
+  {{?ESTILO_CSS}}</style>
+</head>
+<body>
+  <article class="card promo {{?TITLE_CLASS}}" aria-labelledby="headline">
+    {{ART_TAG}}
+    <div class="shade" aria-hidden="true"></div>
+    <header data-fit>
+      <div class="brand">{{BRAND_TAG}}</div>
+      <div class="edition"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.6-.8L3 21l1.9-4.6A8.4 8.4 0 0 1 3 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 9 8.4Z"/></svg> {{EDITION}}</div>
+    </header>
+    <section class="story" data-fit>
+      <h1 id="headline">{{HEADLINE}}</h1>
+      <p class="support">{{BODY_TEXT}}</p>
+    </section>
+    <section class="features" data-fit>
+      <p class="feature-kicker">{{FEATURE_HEADING}}</p>
+      <p class="feature"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>{{FEATURE_ONE}}</p>
+      <p class="feature"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>{{FEATURE_TWO}}</p>
+    </section>
+    <div class="phone" aria-label="{{PHONE_TITLE}}">
+      <div class="speaker" aria-hidden="true"></div>
+      <div class="screen">
+        <div class="phone-head" data-fit><div class="avatar">{{AVATAR}}</div><div><p class="phone-title">{{PHONE_TITLE}}</p><p class="phone-status">{{PHONE_STATUS}}</p></div></div>
+        <p class="demo-label" data-fit>{{DEMO_LABEL}}</p>
+        {{MESSAGES}}
+        <div class="composer">Mensagem…</div>
+      </div>
+    </div>
+    <div class="bottom-shade" aria-hidden="true"></div>
+    <footer data-fit>
+      <p><a class="main-cta" href="{{CTA_URL}}">{{MAIN_CTA}} <span aria-hidden="true">→</span></a><span class="handle">{{HANDLE_LINE}}</span></p>
+      <a class="domain" href="{{CTA_URL}}">{{DOMAIN}}</a>
+    </footer>{{?SELO_TAG}}
+  </article>
+</body>
+</html>

@@ -1,0 +1,229 @@
+/* Mesa de provas: o vocabulário de gráfica do Gazzpush (DESIGN.md §8). A arte do post é o produto, então ela aparece
+   grande, como prova sobre a mesa: papel com sombra de verdade, marcas de corte nos cantos, régua para medir a espera,
+   carimbo para o estado. Tudo em papel opaco, sem vidro, sem pincel. As classes moram na camada `components`: o
+   utilitário do Tailwind, quando vier junto, ainda vence. */
+@layer components {
+  /* ── A mesa: grade de provas ────────────────────────────────────────────────────────────────────────────────── */
+  .mesa { display: grid; gap: 34px 22px; grid-template-columns: repeat(auto-fill, minmax(var(--prova-min, 232px), 1fr)); }
+  @media (max-width: 599px) { .mesa { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 16px; } }
+
+  /* Trilho: uma fileira que rola de lado, com encaixe (as provas das Ideias). No computador cabe tudo numa linha. */
+  .trilho { display: grid; grid-auto-flow: column; grid-auto-columns: var(--prova-min, 198px); gap: 22px; margin: 0 -16px; padding: 20px 16px 22px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: 16px; }
+  .trilho > li { scroll-snap-align: start; }
+  /* Quando o trilho rola, a ponta direita esmaece: o cartão cortado ao meio não vira um "pedaço de texto" solto. */
+  .trilho { -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 22px), transparent 100%); mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 22px), transparent 100%); }
+  @media (max-width: 1023px) { .trilho { margin-inline: -20px; padding-inline: 20px; scroll-padding-inline: 20px; --prova-min: 156px; gap: 16px; } }
+
+  /* ── A prova: arte em 4:5 + legenda ─────────────────────────────────────────────────────────────────────────── */
+  .prova { position: relative; display: grid; grid-template-rows: auto 1fr; align-content: start; gap: 18px; height: 100%; border-radius: 6px; color: var(--color-texto); text-decoration: none; }
+  .prova-arte {
+    position: relative; display: block; isolation: isolate; aspect-ratio: 4 / 5; border-radius: 4px; background-color: var(--color-papel-2);
+    box-shadow: var(--shadow-prova); transition: transform 200ms var(--ease-saida), box-shadow 200ms var(--ease-saida);
+  }
+  .prova-arte > img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+  a.prova:focus-visible .prova-arte, .prova-li:focus-within .prova-arte { transform: translateY(-5px) rotate(-.35deg); box-shadow: var(--shadow-eleva), 0 0 0 1px rgb(21 23 27 / .08); }
+  @media (hover: hover) { a.prova:hover .prova-arte, .prova-li:hover .prova-arte { transform: translateY(-5px) rotate(-.35deg); box-shadow: var(--shadow-eleva), 0 0 0 1px rgb(21 23 27 / .08); } }
+  /* Carrossel: uma folha atrás da capa, como o monte de cards. A folha tem o mesmo tamanho e sai um pouco torta. */
+  .prova-arte[data-pilha]::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 4px; background: var(--color-branco);
+    transform: translate(5px, -5px) rotate(1.6deg); box-shadow: 0 0 0 1px rgb(21 23 27 / .1), 0 6px 10px -6px rgb(21 23 27 / .3);
+    transition: transform 200ms var(--ease-saida);
+  }
+  a.prova:focus-visible .prova-arte[data-pilha]::before { transform: translate(8px, -7px) rotate(2.8deg); }
+  @media (hover: hover) { a.prova:hover .prova-arte[data-pilha]::before, .prova-li:hover .prova-arte[data-pilha]::before { transform: translate(8px, -7px) rotate(2.8deg); } }
+  /* Marcas de corte: aparecem ao apontar e ficam sempre na prova que é a próxima ação. */
+  .prova-arte.corte::after { opacity: 0; transition: opacity 240ms; }
+  a.prova:focus-visible .corte::after, .prova-li:focus-within .corte::after, .prova[data-proxima] .corte::after { opacity: 1; }
+  @media (hover: hover) { a.prova:hover .corte::after, .prova-li:hover .corte::after { opacity: 1; } }
+
+  /* A ação da prova: 44 px de linha, texto centrado, com ou sem a volta de lápis (a da próxima tem 40 px + 2 de cada lado). */
+  .prova .acao-lapis { display: inline-flex; align-items: center; min-height: 40px; margin-block: 2px; padding-block: 0; }
+
+  /* A volta de lápis cabe na coluna estreita do celular: letra e respiro menores, sem quebrar a linha. */
+  @media (max-width: 599px) { .prova .acao-lapis { padding-inline: 12px; font-size: 15px; white-space: nowrap; } }
+
+  /* Número da fila e formato, na linha de legenda (a arte fica limpa, sem cobrir a marca nem a data do card). */
+  .prova-n {
+    display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 4px; background: var(--color-texto-forte); color: var(--color-branco);
+    font: 400 11.5px/1 var(--font-mono); letter-spacing: .04em;
+  }
+  .prova-fmt { display: inline-flex; align-items: center; gap: 3px; color: var(--color-texto-forte); }
+  .prova-fmt svg { width: 15px; height: 15px; }
+
+  /* Sem arte ainda (produzindo): papel hachurado, como prova em branco. */
+  .prova-vaga {
+    position: absolute; inset: 0; z-index: 1; display: grid; place-content: center; justify-items: center; gap: 8px; border-radius: inherit; color: var(--color-apoio);
+    background: repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--color-texto-forte) 6%, transparent) 9px 10px), var(--color-papel-2);
+  }
+
+  /* Legenda da prova */
+  .prova-corpo { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; min-width: 0; height: 100%; }
+  .prova-corpo > .acao { margin-top: auto; padding-top: 6px; }
+  .prova-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--color-apoio); }
+
+  /* Celular (coluna de 168 px): o número e a primeira parte na mesma linha; as outras partes, uma por linha, cortadas com
+     reticências se não couberem. Sem o ponto de separação, que ficaria pendurado no fim da linha. */
+  @media (max-width: 599px) {
+    .prova-meta { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 0 8px; font-size: 11.5px; letter-spacing: 0; }
+    .prova-meta > .prova-n { margin-top: 1px; }
+    .prova-meta > span:last-child { min-width: 0; line-height: 1.5; }
+    .prova-meta > span:last-child > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .prova-meta .sep { display: none; }
+    .prova-meta-solo { grid-template-columns: minmax(0, 1fr); }
+    .prova-espera > span:last-child { display: block; }
+    .prova-espera .sep { display: none; }
+  }
+  .prova-manchete {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; color: var(--color-texto-forte);
+    font-size: 18px; font-weight: 700; letter-spacing: -.018em; line-height: 1.17; text-wrap: balance;
+  }
+  @media (max-width: 599px) { .prova-manchete { font-size: 16px; -webkit-line-clamp: 5; } }
+  a.prova:focus-visible .prova-manchete { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: var(--color-fio-forte); }
+  @media (hover: hover) { a.prova:hover .prova-manchete { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: var(--color-fio-forte); } }
+
+  /* Régua de espera: 24 divisões; a parte cheia é a espera desta prova em relação à mais antiga da fila. */
+  .regua { position: relative; display: block; width: 100%; max-width: 144px; height: 10px; color: var(--color-fio-forte); }
+  .regua, .regua > i {
+    background-image: linear-gradient(90deg, currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px);
+    background-size: 6px 5px, 24px 10px; background-position: 0 100%, 0 100%; background-repeat: repeat-x;
+  }
+  .regua > i { position: absolute; inset: 0 auto 0 0; display: block; color: var(--color-texto-forte); }
+
+  /* Lista de provas como li: a li guarda a posição e a escada de entrada. */
+  .prova-li { position: relative; list-style: none; min-width: 0; }
+
+  /* ── Folha de pauta: a ideia sugerida, em papel branco sobre a mesa ─────────────────────────────────────────── */
+  /* Trilho curto (Ideias): a prova pequena ao lado do texto, para os posts prontos não disputarem a primeira dobra com as
+     ideias. A arte aqui identifica, não se confere: a leitura é na revisão. */
+  .trilho-curto { --prova-min: 320px; gap: 24px; padding-block: 14px 16px; }
+  .trilho-curto .prova { grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: auto; gap: 16px; }
+  .trilho-curto .prova-corpo { gap: 3px; }
+  .trilho-curto .prova-manchete { -webkit-line-clamp: 2; }
+  .trilho-curto .prova-corpo > .acao { padding-top: 0; }
+  @media (max-width: 1023px) { .trilho-curto { --prova-min: 300px; gap: 16px; } }
+
+  .pautas { display: grid; gap: 20px; margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(auto-fill, minmax(min(100%, 318px), 1fr)); }
+  .pauta {
+    position: relative; display: flex; flex-direction: column; gap: 11px; min-width: 0; padding: 20px 22px 14px; border-radius: 6px; background: var(--color-branco);
+    box-shadow: var(--shadow-curta); transition: box-shadow 200ms var(--ease-saida), transform 200ms var(--ease-saida);
+  }
+  .pauta:focus-within { box-shadow: var(--shadow-eleva); transform: translateY(-2px); }
+  @media (hover: hover) { .pauta:hover { box-shadow: var(--shadow-eleva); transform: translateY(-2px); } }
+  /* As ações ficam no pé, alinhadas entre as folhas da mesma fileira, separadas por um fio. */
+  .pauta-acoes { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--color-fio); }
+  .pauta > .pauta-acoes:first-child { margin-top: 0; }
+
+  /* Carregando: provas em branco no lugar. */
+  .prova-esq .prova-arte { box-shadow: none; }
+
+  /* ── Carimbo sobre a arte (Postados): a cavaleiro da borda de baixo da capa, para não cobrir o texto do card ───────────────────────────── */
+  .prova-carimbo { position: absolute; left: 14px; bottom: -12px; z-index: 3; background: var(--color-papel); }
+
+  /* ── Folha vazia: uma prova em branco, tracejada, com as marcas de corte ───────────────────────────────────── */
+  .folha-vazia {
+    position: relative; display: grid; place-content: center; justify-items: center; gap: 6px; width: 148px; aspect-ratio: 4 / 5; flex: none;
+    border-radius: 4px; color: var(--color-apoio); text-align: center;
+    background: repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--color-texto-forte) 4.5%, transparent) 9px 10px), var(--color-papel);
+    border: 1.5px dashed var(--color-fio-forte);
+  }
+  .folha-vazia.corte { --corte-fora: 12px; }
+}
+
+/* ── Paleta de comandos (⌘K) e marca de margem da lateral ────────────────────────────────────────────────────── */
+@layer components {
+  .paleta {
+    margin: 11vh auto auto; width: min(640px, calc(100% - 24px)); max-height: min(70dvh, 560px); padding: 0; border: 0; border-radius: 12px; overflow: hidden;
+    background: var(--color-papel); color: var(--color-texto); box-shadow: var(--shadow-eleva), 0 44px 90px -32px rgb(21 23 27 / .55);
+  }
+  .paleta[open] { display: flex; flex-direction: column; }
+  .paleta::backdrop { background: rgb(21 23 27 / .38); }
+  /* A paleta abre pronta, sem animação: usa-se o dia inteiro, e animação ali vira atraso (DESIGN.md §12). */
+  .paleta-campo { display: flex; align-items: center; gap: 12px; padding: 0 16px; box-shadow: 0 1px 0 var(--color-fio); }
+  .paleta-entrada { flex: 1; min-width: 0; min-height: 58px; border: 0; background: transparent; color: var(--color-texto-forte); font-size: 17px; outline: none; }
+  .paleta-lista { flex: 1; margin: 0; padding: 4px 8px 8px; list-style: none; overflow-y: auto; overscroll-behavior: contain; }
+  .paleta-item { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; cursor: pointer; }
+  .paleta-item[aria-selected="true"] { background: var(--color-papel-2); color: var(--color-texto-forte); }
+  .paleta-item[aria-selected="true"]::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 0 3px 3px 0; background: var(--color-texto-forte); }
+  .paleta-pe { display: flex; align-items: center; gap: 18px; padding: 10px 16px; background: var(--color-papel-2); box-shadow: 0 -1px 0 var(--color-fio); color: var(--color-apoio); font-size: 12px; }
+
+  /* Marca de margem: o risco do revisor ao lado da seção aberta. Tem nome de transição: ao trocar de seção, ele
+     escorrega até a nova em vez de reaparecer. */
+  .marca-margem {
+    position: absolute; left: 0; top: 50%; width: 3px; height: 20px; margin-top: -10px; border-radius: 0 3px 3px 0; background: var(--color-tinta);
+    view-transition-name: marca-nav;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(marca-nav) { animation-duration: 220ms; animation-timing-function: var(--ease-saida); }
+}
+
+/* ── A mesa da revisão: o palco da arte, as tiras de prova ──────────────────────────────────────────────────────── */
+@layer components {
+  .palco { position: relative; min-width: 0; }
+  .palco-topo { display: none; }
+  .palco-arte { position: relative; margin-inline: auto; }
+  @media (min-width: 1024px) {
+    /* Mesa de desenho: papel-2 com uma grade de pontos, a prova no meio com as marcas de corte, a cota em cima. */
+    .palco {
+      padding: 20px 30px 14px; border-radius: 10px; background-color: var(--color-papel-2);
+      background-image: radial-gradient(color-mix(in srgb, var(--color-texto-forte) 10%, transparent) 1px, transparent 1.2px); background-size: 14px 14px;
+      box-shadow: inset 0 0 0 1px rgb(21 23 27 / .05), inset 0 1px 0 rgb(255 255 255 / .6);
+    }
+    .palco-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 24px; }
+    .palco-topo > p { color: var(--color-apoio); letter-spacing: .06em; text-transform: uppercase; font-size: 11px; }
+    .palco-acoes { display: flex; gap: 8px; }
+    .palco-acoes:empty { display: none; }
+    .palco-arte { width: min(100%, 404px); --corte-fora: 14px; --corte-lado: 9px; --corte-cor: color-mix(in srgb, var(--color-texto-forte) 60%, transparent); }
+  }
+  @media (max-width: 1023px) { .palco-arte.corte::after { display: none; } }
+
+  .tiras { display: flex; gap: 10px; max-width: 100%; padding: 9px 7px 7px; overflow-x: auto; }
+  .tira {
+    position: relative; flex: none; width: 44px; aspect-ratio: 4 / 5; padding: 0; border: 0; border-radius: 3px; overflow: hidden; cursor: pointer; background: var(--color-papel-2);
+    box-shadow: var(--shadow-curta); opacity: .7; transition: opacity 160ms, transform 200ms var(--ease-saida), box-shadow 160ms, scale 140ms var(--ease-saida);
+  }
+  .tira img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  @media (hover: hover) { .tira:hover { opacity: 1; transform: translateY(-2px); } }
+  .tira[aria-current="true"] { opacity: 1; transform: translateY(-3px); box-shadow: 0 0 0 2px var(--color-papel), 0 0 0 4px var(--color-texto-forte), 0 8px 12px -6px rgb(21 23 27 / .35); }
+  @media (min-width: 1024px) { .tira[aria-current="true"] { box-shadow: 0 0 0 2px var(--color-papel-2), 0 0 0 4px var(--color-texto-forte), 0 8px 12px -6px rgb(21 23 27 / .35); } }
+}
+
+@media (min-width: 1180px) and (min-height: 820px) { .palco-fixo { position: sticky; top: calc(var(--topo) + 12px); align-self: start; } }
+
+/* Base da mesa: "1 / 4 · Capa", as tiras de prova e as setas: contador e setas em cima, tiras embaixo, de ponta a ponta
+   (no computador, as tiras centradas quando cabem). */
+@layer components {
+  .palco-baixo { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "n setas" "tiras tiras"; align-items: center; gap: 0 8px; margin-top: 8px; }
+  .palco-baixo .tiras { justify-content: flex-start; }
+  @media (min-width: 1024px) {
+    /* No computador também em duas linhas: o contador (de largura variável) não empurra as tiras a cada card. */
+    .palco-baixo { margin-top: 14px; }
+    .palco-baixo .tiras { justify-content: safe center; }
+  }
+}
+
+/* Entrar: o formulário numa folha de papel branco, de pé sobre a mesa (só no computador; no celular o formulário é a tela). */
+@layer components {
+  @media (min-width: 1024px) {
+    .folha-entrar { padding: 34px 34px 30px; border-radius: 12px; background: var(--color-branco); box-shadow: var(--shadow-eleva), 0 36px 70px -36px rgb(21 23 27 / .35); }
+    .folha-entrar .entrada { background: var(--color-papel-2); }
+  }
+}
+
+/* Marcas de corte só onde há margem para elas (≥ 1024 px): a prévia do card na Marca, na edição e no Reels. */
+@layer components {
+  .corte-so-lg::after { display: none; }
+  @media (min-width: 1024px) { .corte-so-lg::after { display: block; } .corte-so-lg { --corte-fora: 12px; --corte-lado: 8px; } }
+}
+
+/* Carimbo na mesa da publicação: aprovado ou postado; bate uma vez (cresce, assenta) quando acabou de ser aprovado. */
+@layer components {
+  .palco-carimbo { display: none; }
+  @media (min-width: 1024px) {
+    .palco-carimbo { position: absolute; top: 14px; right: 24px; z-index: 3; display: inline-flex; padding: 4px 10px 3px; background: var(--color-papel-2); font-size: 12px; }
+  }
+  /* O carimbo bate em 200 ms: cresce um pouco e assenta, sem quique (vale para a prova aprovada e para o "Pode publicar"). */
+  .carimbo-bate { animation: carimbo-bate 200ms cubic-bezier(.2, .9, .3, 1.1) both; }
+  @keyframes carimbo-bate { from { opacity: .3; transform: rotate(-2.2deg) scale(1.5); } to { opacity: 1; transform: rotate(-2.2deg) scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .carimbo-bate { animation: none; } }
+}
