@@ -7,26 +7,26 @@
   "observability": { "enabled": true },
   "vars": { "INSTALACAO_PROPRIA": "1" },
 
-  // Domínio próprio: descomente e troque pelo seu. Sem ele, o app sobe no workers.dev. Cookie e CSRF são da origem
-  // de PUBLIC_BASE_URL, então só um host deve servir o app.
+  // Custom domain: uncomment and set your hostname. Without it, the app is served on workers.dev. Cookies and CSRF
+  // are bound to the origin in PUBLIC_BASE_URL, so serve the app from a single host.
   // "routes": [{ "pattern": "<SEU_DOMINIO>", "custom_domain": true }],
   // "workers_dev": false,
 
-  // UI (Vite + React em web/, "npm run web:build"). API, mídia e health passam pelo Worker; o resto é arquivo
-  // estático, e rota desconhecida devolve o index.html da SPA.
+  // Web app (Vite + React in web/, "npm run web:build"). API, media, health and public pages go through the Worker;
+  // everything else is a static file, and unknown paths return the SPA's index.html.
   "assets": {
     "directory": "web/dist",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/media/*", "/health", "/fontes/*", "/anuncio/*", "/v/*", "/stripe/*"]
   },
 
-  // Template do card e fontes entram no bundle: render sem request externo.
+  // Card templates and fonts are bundled: rendering makes no external requests.
   "rules": [
     { "type": "Text", "globs": ["**/*.html"], "fallthrough": true },
     { "type": "Data", "globs": ["**/*.woff2"], "fallthrough": true }
   ],
 
-  // Monitor: a cada 15 min enfileira as fontes vencidas.
+  // Every 15 min: enqueue due sources. 09:00 UTC: re-read dossiers, court cases, FOI deadlines. 21:00 UTC: daily digest.
   "triggers": { "crons": ["*/15 * * * *", "0 9 * * *", "0 21 * * *"] },
 
   "d1_databases": [{
@@ -47,15 +47,15 @@
       "dead_letter_queue": "redacao-monitor-dlq"
     }]
   },
-  // Dois Workflows curtos, sem waitForEvent: produção termina em revisão; a aprovação cria a publicação.
+  // Two short Workflows, no waitForEvent: production ends in review; approval starts publishing.
   "workflows": [
     { "name": "redacao-producao", "binding": "PRODUCAO_WORKFLOW", "class_name": "ProducaoWorkflow" },
     { "name": "redacao-publicacao", "binding": "PUBLICACAO_WORKFLOW", "class_name": "PublicacaoWorkflow" }
   ],
-  // Reels (Fase 4): HyperFrames + Chrome sem tela + FFmpeg num Cloudflare Container (container/reels/), atrás do
-  // Durable Object ReelsContainer. Exige plano Workers Paid e Docker na máquina do deploy (README, Reels). Local: o
-  // `wrangler dev` não sobe container no Windows, então fica desligado aqui; com `REELS_URL_LOCAL` no .dev.vars o
-  // Worker manda o pedido ao mesmo container rodando no `docker run` (README). No Linux/WSL: `--enable-containers`.
+  // Reels: HyperFrames + headless Chrome + FFmpeg in a Cloudflare Container (container/reels/), behind the
+  // ReelsContainer Durable Object. Requires Workers Paid and Docker on the deploy machine (docs/self-hosting.md).
+  // `wrangler dev` cannot run containers on Windows, so they are disabled in dev; set REELS_URL_LOCAL in .dev.vars to
+  // use a container started with `docker run`. On Linux/WSL: `wrangler dev --enable-containers`.
   "dev": { "enable_containers": false },
   "containers": [{
     "class_name": "ReelsContainer",
@@ -65,12 +65,12 @@
   }],
   "durable_objects": { "bindings": [{ "name": "REELS", "class_name": "ReelsContainer" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReelsContainer"] }],
-  // remote: true → em `wrangler dev` o binding fala com o serviço real (não há emulação local).
+  // remote: true → in `wrangler dev` these bindings call the real service (there is no local emulation).
   "ai": { "binding": "AI", "remote": true },
   "browser": { "binding": "BROWSER", "remote": true },
   "vectorize": [
     { "binding": "DEDUPE", "index_name": "redacao-dedupe", "remote": true },
-    // Pergunte ao documento (Matéria, Fase 5): bge-m3, 1024 dimensões, cosseno; um namespace por arquivo.
+    // Ask the document: bge-m3, 1024 dimensions, cosine; one namespace per file.
     { "binding": "DOCS_VETOR", "index_name": "redacao-documentos", "remote": true }
   ],
   "analytics_engine_datasets": [{ "binding": "METRICS", "dataset": "redacao_metrics" }]
