@@ -1,57 +1,65 @@
-# Copie para .dev.vars (local). Em produção: `wrangler secret put NOME`.
+# Local development variables. Copy to .dev.vars and fill in.
+# In production, set each one with `npx wrangler secret put NAME`.
+# Full reference: docs/configuration.md
+
+# --- Required -------------------------------------------------------------------------------------------------------
 PUBLIC_BASE_URL=http://localhost:8787
-CF_ACCOUNT_ID=<SEU_ACCOUNT_ID>
-AI_GATEWAY_ID=redacao
+# Generate each with: node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+BETTER_AUTH_SECRET=
+# Encrypts social tokens and per-outlet AI keys. Use a different value and keep a backup.
+TOKEN_ENC_KEY=
+CF_ACCOUNT_ID=<YOUR_ACCOUNT_ID>
+# AI Gateway name in your account. Leave empty to call providers directly.
+AI_GATEWAY_ID=
+
+# --- AI providers (server fallback; each outlet can add its own keys in the app) ------------------------------------
+# Text: drafting, claim checking, document Q&A. One of the two is enough.
 DEEPSEEK_API_KEY=
-# DEEPSEEK_URL=
-# Segunda opinião e desvio por tema (opcional; sem ela a conferência tem uma opinião só). Passa pelo AI Gateway.
-ANTHROPIC_API_KEY=
-# Opcional: claude-opus-5-5 (padrão) ou claude-haiku-5-5.
-# SEGUNDA_MODELO=
-# SEGUNDA_URL=
-# Escudo jurídico (opcionais). E-mail de saída do pedido de outro lado (com o binding send_email "EMAIL" no
-# wrangler.jsonc e o domínio no Cloudflare Email Service); sem ele, o pedido é copiado e mandado por fora.
-# EMAIL_REMETENTE=
-# Chaves S3 do archive.org (Save Page Now com limite maior); sem elas, o Wayback público.
-# WAYBACK_ACCESS_KEY=
-# WAYBACK_SECRET=
-# Autoridade de carimbo de tempo RFC 3161 (padrão https://freetsa.org/tsr).
-# TSA_URL=
-# Raiz confiável da autoridade acima (certificado DER em base64). Obrigatória com outra TSA_URL; a da FreeTSA vem no código.
-# TSA_RAIZ=
-# WAYBACK_URL=
-# BUSCA_VETORIAL=desligada usa apenas a busca por palavra.
-# BUSCA_VETORIAL=
-# WHISPER_URL=
-# Matéria viva (opcional): a chave pública da API do DataJud (CNJ), publicada em
-# https://datajud-wiki.cnj.jus.br/api-publica/acesso (o CNJ pode trocar). Sem ela, os processos do texto não são acompanhados.
-# DATAJUD_API_KEY=
-# DATAJUD_URL=
-XAI_API_KEY=
-# Chaves opcionais do servidor. Cada veículo também pode cadastrar suas chaves no app.
 GEMINI_API_KEY=
+# Second opinion on risky paragraphs (optional). Default model: claude-opus-5-5.
+ANTHROPIC_API_KEY=
+# SEGUNDA_MODELO=claude-haiku-5-5
+# Illustration (optional). Without either, Workers AI is used.
 KIE_API_KEY=
 FAL_KEY=
-# Gere um segredo aleatório exclusivo para cifrar os tokens e as chaves de IA dos veículos.
-TOKEN_ENC_KEY=
-# Auth (Better Auth). Segredo: node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
-BETTER_AUTH_SECRET=
-# Login Google (opcional; sem ele só e-mail/senha). Redirect: <PUBLIC_BASE_URL>/api/auth/callback/google
+
+# --- Sign-in and Google (optional) ----------------------------------------------------------------------------------
+# Google sign-in. Redirect URI: <PUBLIC_BASE_URL>/api/auth/callback/google
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-# Google Docs (opcional; com as quatro Google aparece "Conectar Google Docs"). Passo a passo no README, "Google Docs".
+# With the two above, enables Google Docs import (docs/integrations.md#google-docs).
 GOOGLE_API_KEY=
 GOOGLE_PROJECT_NUMBER=
-# user.id (vírgula) com acesso a /api/admin/* (id, não e-mail: o cadastro não verifica e-mail)
+# Comma-separated user ids allowed to use /api/admin/* (ids, not emails: sign-up does not verify email).
 ADMIN_USER_IDS=
 
-# Reels no Windows (o wrangler dev não sobe container): o Container do Reels no docker run (README, Reels).
+# --- Legal shield (optional) ----------------------------------------------------------------------------------------
+# Sender for right-of-reply emails. Needs the "EMAIL" send_email binding and a domain in Cloudflare Email Service.
+# EMAIL_REMETENTE=
+# Internet Archive S3 keys for Save Page Now with higher limits. Without them, the public endpoint is used.
+# WAYBACK_ACCESS_KEY=
+# WAYBACK_SECRET=
+# RFC 3161 timestamp authority (default https://freetsa.org/tsr) and its trusted root (DER in base64, required with TSA_URL).
+# TSA_URL=
+# TSA_RAIZ=
+
+# --- Brazil-specific (optional) -------------------------------------------------------------------------------------
+# Public DataJud (CNJ) key, to follow court cases cited in stories. Review DataJud's terms of use first.
+# DATAJUD_API_KEY=
+
+# --- Search -----------------------------------------------------------------------------------------------------------
+# Set to "desligada" to use keyword-only search in documents.
+# BUSCA_VETORIAL=
+
+# --- Reels on Windows -----------------------------------------------------------------------------------------------
+# `wrangler dev` cannot run containers on Windows. Point to a container started with `docker run` (docs/self-hosting.md).
 # REELS_URL_LOCAL=http://localhost:8080
 
-# Cobrança (opcional; com as quatro a aba Plano assina e gerencia; sem elas, diz que não está configurada e o resto segue igual).
-# Passo a passo no README, seção Preço por veículo.
+# --- Billing (only for a paid hosted service; leave unset when self-hosting) ----------------------------------------
 # STRIPE_SECRET_KEY=
 # STRIPE_WEBHOOK_SECRET=
 # STRIPE_PRECO_PAGINA=
 # STRIPE_PRECO_PORTAL=
-# STRIPE_URL=
+
+# --- Test-only overrides (do not set in production) -----------------------------------------------------------------
+# DEEPSEEK_URL= GEMINI_URL= SEGUNDA_URL= KIE_URL= FAL_URL= WHISPER_URL= WAYBACK_URL= DATAJUD_URL= STRIPE_URL=

@@ -1,4 +1,45 @@
 {
+  "name": "gazzpush",
+  "version": "0.1.0",
+  "description": "Open-source verification desk for investigative journalism: claim-by-claim checking against a dossier, quote checks against recordings, document Q&A with verified citations, right of reply, and timestamped defense packages.",
+  "keywords": [
+    "journalism",
+    "investigative-journalism",
+    "fact-checking",
+    "verification",
+    "newsroom",
+    "foia",
+    "rfc3161",
+    "cloudflare-workers"
+  ],
+  "homepage": "https://github.com/CitadelAgency/gazzpush#readme",
+  "bugs": {
+    "url": "https://github.com/CitadelAgency/gazzpush/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CitadelAgency/gazzpush.git"
+  },
+  "license": "AGPL-3.0-only",
+  "author": "Citadel Tecnologia LTDA",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "wrangler dev --local-upstream localhost:8787",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit && tsc --noEmit -p test && tsc --noEmit -p web",
+    "db:migrate:local": "wrangler d1 migrations apply redacao-db --local",
+    "db:migrate": "wrangler d1 migrations apply redacao-db --remote",
+    "types": "wrangler types",
+    "test": "vitest run",
+    "auth:schema": "npx -y auth@1.7.14 generate --config scripts/auth-schema.config.ts --output migrations/0002_auth.sql --yes",
+    "web:build": "vite build web",
+    "web:dev": "vite build web --watch --mode development",
+    "e2e": "playwright test -c web/e2e"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
     "@cloudflare/containers": "^0.3.7",
@@ -36,23 +77,5 @@
     "vite": "^8.3.5",
     "vitest": "^4.1.12",
     "wrangler": "^4.156.0"
-  },
-  "name": "redacao",
-  "private": true,
-  "license": "AGPL-3.0-only",
-  "author": "Citadel Tecnologia LTDA",
-  "type": "module",
-  "scripts": {
-    "dev": "wrangler dev --local-upstream localhost:8787",
-    "deploy": "wrangler deploy",
-    "check": "tsc --noEmit && tsc --noEmit -p test && tsc --noEmit -p web",
-    "db:migrate:local": "wrangler d1 migrations apply redacao-db --local",
-    "db:migrate": "wrangler d1 migrations apply redacao-db --remote",
-    "types": "wrangler types",
-    "test": "vitest run",
-    "auth:schema": "npx -y auth@1.7.14 generate --config scripts/auth-schema.config.ts --output migrations/0002_auth.sql --yes",
-    "web:build": "vite build web",
-    "web:dev": "vite build web --watch --mode development",
-    "e2e": "playwright test -c web/e2e"
   }
 }

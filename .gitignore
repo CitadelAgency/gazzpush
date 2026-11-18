@@ -1,23 +1,24 @@
+# Dependencies and build output
 node_modules/
+dist/
+
+# Wrangler local state and generated types (npm run types)
 .wrangler/
+worker-configuration.d.ts
+
+# Secrets
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
 .env
 .env.*
 !.env.example
-dist/
+
+# Logs and test artifacts
 *.log
-# gerado: npm run types
-worker-configuration.d.ts
-
-# fusion (mapas e relatórios locais)
-.fusion/
-
-# pesquisa (deep research)
-research_notes/
-reports/
-
-# trabalho local (originais de imagens geradas, logs da noite)
-.work/
 test-results/
+playwright-report/
+
+# Local working files
+.work/
+reports/
