@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/CitadelAgency/gazzpush/security/advisories/new
+    about: Report vulnerabilities privately. Do not open a public issue.
+  - name: Self-hosting guide
+    url: https://github.com/CitadelAgency/gazzpush/blob/main/docs/self-hosting.md
+    about: Step-by-step deployment to your Cloudflare account.

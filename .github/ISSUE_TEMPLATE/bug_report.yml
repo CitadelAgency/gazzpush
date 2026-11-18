@@ -1,0 +1,52 @@
+name: Bug report
+description: Something doesn't work as documented.
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Security issues go to the Security tab, not here** (see SECURITY.md).
+        Never paste unpublished reporting, source documents, recordings or secrets into an issue.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a story in an author outlet
+        2. Upload a PDF to the dossier
+        3. Ask ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Story desk (editor, claim checking)
+        - Legal shield (right of reply, defense package, timestamps)
+        - Documents and recordings
+        - Living stories, FOI, court cases
+        - Newsroom pipeline (sources, leads, pieces, review)
+        - Distribution (cards, Reels, Instagram)
+        - Self-hosting and configuration
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: e.g. 0.1.0 or a1b2c3d
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error messages
+      description: From the browser console, `wrangler tail` or the screen. Remove any private content.
+      render: text
