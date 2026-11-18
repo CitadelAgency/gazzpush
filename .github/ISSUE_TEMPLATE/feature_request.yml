@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose an improvement or a new tool.
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The reporting or editing problem
+      description: What are you trying to do, and what gets in the way today? A real example helps most.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How could Gazzpush help? Say which parts a model would do and how the code would verify them.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and workarounds
+  - type: input
+    id: who
+    attributes:
+      label: Who would use it
+      placeholder: e.g. investigative reporters, local newsrooms, fact-checkers, editors

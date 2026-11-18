@@ -1,6 +1,19 @@
-gazzpush
+Gazzpush
 Copyright (C) 2026 Citadel Tecnologia LTDA
 
 This program is free software: you can redistribute it and/or modify it under the terms of the
 GNU Affero General Public License as published by the Free Software Foundation, version 3.
 See the LICENSE file for the full text.
+
+Third-party components
+----------------------
+
+Fonts bundled in this repository are licensed under the SIL Open Font License 1.1. Each font ships
+with its license file next to it (assets/fonts/*-OFL.txt, web/src/estilo/fontes/OFL-*.txt). The
+"zero" font files in web/src/estilo/fontes/ are derived from Atkinson Hyperlegible Next.
+
+npm dependencies are not included in this repository; their licenses are listed in each package.
+
+The Reels container (container/reels/) installs, at build time, HyperFrames (Apache-2.0) and GSAP,
+which is distributed by its authors under the GSAP "Standard No Charge" license, not an open-source
+license. By building the container you accept the GSAP license terms.
