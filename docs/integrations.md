@@ -24,14 +24,14 @@ when the user clicks **Connect Google Docs**. Sign in with Google itself only re
    `<PUBLIC_BASE_URL>/*` (and `http://localhost:8787/*`) and to the Google Picker API only.
 6. **Variables.** Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_API_KEY` (step 5) and
    `GOOGLE_PROJECT_NUMBER` (step 1), in `.dev.vars` locally or with `npx wrangler secret put` in production.
-7. **Check.** In the app, open **Outlet › Accounts** and click **Connect Google Docs**. After you accept, the block
+7. **Check.** In the app, open **Publication › Accounts** and click **Connect Google Docs**. After you accept, the block
    shows *connected*, and the Docs tab of **New idea** opens the Picker.
 
 With only `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, you get Google sign-in without Docs import.
 
 ## Instagram
 
-Outlets connect Instagram accounts under **Outlet › Accounts**. Approved pieces are published through the Instagram
+Outlets connect Instagram accounts under **Publication › Accounts**. Approved pieces are published through the Instagram
 Graph API: images and Reels are fetched by Instagram from short-lived signed URLs on your `PUBLIC_BASE_URL`, so that
 origin must be publicly reachable over HTTPS. Account tokens are stored encrypted with `TOKEN_ENC_KEY`.
 

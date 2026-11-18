@@ -40,7 +40,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 
 ## AI providers
 
-Each outlet can bring its own keys under **Outlet › AI keys**, stored encrypted with `TOKEN_ENC_KEY`. A server key is a
+Each outlet can bring its own keys under **Publication › AI keys**, stored encrypted with `TOKEN_ENC_KEY`. A server key is a
 fallback for outlets without their own; when you set one, every outlet that has no key of its own spends from your
 account. Leave server keys empty if each outlet should pay for its own usage. Providers, model ids and prices are
 defined in one place: [`src/lib/provedoresTabela.ts`](../src/lib/provedoresTabela.ts).

@@ -122,13 +122,13 @@ flowchart LR
   subgraph Reporter
     UI[React SPA]
   end
-  subgraph Worker[Cloudflare Worker]
-    API[Hono API + Better Auth]
+  subgraph Worker["Cloudflare Worker"]
+    API["Hono API + Better Auth"]
     CRON[Cron triggers]
     Q[Queue consumer]
-    WF[Workflows: production, publishing]
+    WF["Workflows: production, publishing"]
   end
-  UI -->|/api/*| API
+  UI -->|"/api/*"| API
   CRON --> Q
   API --> Q
   API --> WF
@@ -136,13 +136,13 @@ flowchart LR
   Q --> R2[(R2)]
   WF --> D1
   WF --> R2
-  Q --> AI[Workers AI: Whisper, triage, embeddings]
+  Q --> AI["Workers AI: Whisper, triage, embeddings"]
   Q --> VEC[(Vectorize)]
-  API --> LLM[DeepSeek or Gemini; Claude for second opinion]
-  WF --> BR[Browser Rendering: cards, PDFs]
-  WF --> CT[Container: Reels via HyperFrames + FFmpeg]
-  WF --> IG[Instagram Graph API]
-  Q --> EXT[Wayback, RFC 3161 TSA, DataJud]
+  API --> LLM["Text models: DeepSeek or Gemini, Claude as second opinion"]
+  WF --> BR["Browser Rendering: cards, PDFs"]
+  WF --> CT["Container: Reels via HyperFrames + FFmpeg"]
+  WF --> IG["Instagram Graph API"]
+  Q --> EXT["Wayback, RFC 3161 TSA, DataJud"]
 ```
 
 | Layer | Technology |
@@ -188,7 +188,7 @@ npm run dev -- --local     # http://localhost:8787
 
 Open <http://localhost:8787>, create the first account and then your first outlet. To draft and check text you need a
 text-model key, either in `.dev.vars` (`DEEPSEEK_API_KEY` or `GEMINI_API_KEY`) or per outlet under
-**Outlet › AI keys**. See [docs/development.md](docs/development.md) for the full development loop and tests.
+**Publication › AI keys**. See [docs/development.md](docs/development.md) for the full development loop and tests.
 
 ## Deploy to your Cloudflare account
 
