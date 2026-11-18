@@ -11,7 +11,7 @@ UI, and where to look.
 
 | In code | In English | Notes |
 |---|---|---|
-| `veiculo`, `tenant` | outlet | A newsroom, publication or independent author. Every row belongs to one (`tenant_id`). Routes live under `/api/t/:tenantId/...`. |
+| `veiculo`, `tenant` | outlet | A newsroom, publication or independent author. The English UI labels this section **Publication**. Every row belongs to one (`tenant_id`). Routes live under `/api/t/:tenantId/...`. |
 | `membro`, `membros` | member | A user's role in an outlet: `admin`, `editor` or `reporter` (`PAPEIS` in `src/kernel/estados.ts`). Checked by `requireMembro` in `src/shell/tenancy.ts`. |
 | `convite` | invite | Invitation to join an outlet (`src/shell/convites.ts`). |
 | `modo` | outlet mode | `local` (filters by city and neighborhood), `tematico` (thematic: filters by topic) or `autoral` (author: an individual journalist's outlet, with the story desk). |

@@ -73,5 +73,7 @@ Common types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`, `ci`. 
 
 ## Licensing of contributions
 
-Gazzpush is licensed under the [AGPL-3.0-only](LICENSE). By submitting a contribution, you agree that it is licensed
-under the same terms and that you have the right to submit it.
+Gazzpush is licensed under the [AGPL-3.0-only](LICENSE). The maintainers have not yet published the terms for
+outside contributions (for example, whether a contributor license agreement will be required). Until they do, please
+open an issue before submitting a substantial code contribution, so the terms can be agreed first. Documentation fixes
+and bug reports are welcome at any time.

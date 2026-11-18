@@ -36,22 +36,22 @@ scripts/                maintenance scripts (auth schema, municipalities data)
 
 ```mermaid
 flowchart TB
-  Browser -->|static assets| Assets[Workers Assets: web/dist]
-  Browser -->|/api/* /media/* /fontes/* /v/* /anuncio/* /stripe/* /health| Worker
+  Browser -->|"static assets"| Assets["Workers Assets: web/dist"]
+  Browser -->|"API, media, public pages"| Worker
   subgraph Worker
-    Hono[Hono app] --> Auth[Better Auth]
-    Hono --> Tenancy[requireMembro: tenant check]
-    Cron[scheduled] --> Queue[(redacao-monitor)]
-    Queue --> Consumer[queue consumer]
-    Email[email handler] --> Escudo[right-of-reply replies]
+    Hono["Hono app"] --> Auth["Better Auth"]
+    Hono --> Tenancy["requireMembro: tenant check"]
+    Cron["scheduled"] --> Queue[("redacao-monitor")]
+    Queue --> Consumer["queue consumer"]
+    Email["email handler"] --> Escudo["right-of-reply replies"]
   end
-  Hono --> Prod[ProducaoWorkflow]
-  Hono --> Pub[PublicacaoWorkflow]
-  Consumer --> D1[(D1 redacao-db)]
-  Consumer --> R2[(R2 redacao-media)]
-  Prod --> Browser2[Browser Rendering]
-  Prod --> Reels[ReelsContainer]
-  Pub --> Instagram[Instagram Graph API]
+  Hono --> Prod["ProducaoWorkflow"]
+  Hono --> Pub["PublicacaoWorkflow"]
+  Consumer --> D1[("D1 redacao-db")]
+  Consumer --> R2[("R2 redacao-media")]
+  Prod --> Browser2["Browser Rendering"]
+  Prod --> Reels["ReelsContainer"]
+  Pub --> Instagram["Instagram Graph API"]
 ```
 
 Static files are served by Workers Assets with `not_found_handling: single-page-application`. Only the paths listed in
