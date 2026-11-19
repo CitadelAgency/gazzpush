@@ -9,18 +9,18 @@ publishing as the distribution layer. The interface speaks the language of the p
 reporters and editors who review copy, so its vocabulary comes from the newsroom and the print shop (proofs, crop
 marks, stamps, the editor's blue pencil), not from a generic UI theme.
 
-Terminology follows [`docs/glossary.md`](docs/glossary.md). Token and class names stay in Portuguese, as in the code;
-the tables give their meaning.
+Terminology follows [`docs/glossary.md`](docs/glossary.md). Token and class names stay in Portuguese; the code around
+them is in English. The tables give their meaning.
 
 | Where | What |
 |---|---|
-| `web/src/estilo/tokens.css` | Tokens (`@theme`), base styles, buttons, fields, banners, night mode |
-| `web/src/estilo/prova.css` | Proof-desk vocabulary (§8) |
-| `web/src/estilo/rodada4.css` | Sheet-on-the-desk layout, sidebar, folio, motion (§12) |
-| `web/src/kit/lapis.css`, `web/src/kit/Lapis.tsx`, `web/src/kit/tracos.ts` | Blue-pencil strokes (§4) |
-| `web/src/kit/Prova.tsx` | Proof card, empty desk, skeleton, art transitions |
-| `web/src/kit/Partes.tsx` | Progressive disclosure (§9) |
-| `web/src/movimento.ts`, `web/src/dica.ts`, `web/src/kit/arteVT.ts` | Motion, tooltips, view transitions |
+| `web/src/styles/tokens.css` | Tokens (`@theme`), base styles, buttons, fields, banners, night mode |
+| `web/src/styles/proof.css` | Proof-desk vocabulary (§8) |
+| `web/src/styles/desk.css` | Sheet-on-the-desk layout, sidebar, folio, motion (§12) |
+| `web/src/kit/pencil.css`, `web/src/kit/Pencil.tsx`, `web/src/kit/strokes.ts` | Blue-pencil strokes (§4) |
+| `web/src/kit/Proof.tsx` | Proof card, empty desk, skeleton, art transitions |
+| `web/src/kit/Parts.tsx` | Progressive disclosure (§9) |
+| `web/src/motion.ts`, `web/src/tooltip.ts`, `web/src/kit/artTransition.ts` | Motion, tooltips, view transitions |
 
 ## 1. Direction: Blue pencil
 
@@ -36,7 +36,7 @@ looks like the material they handle: clean paper, graphite, and the **editor's b
 
 ## 2. Tokens
 
-All tokens live in `web/src/estilo/tokens.css` under `@theme`. Tailwind's default palette, fonts, radii, shadows and
+All tokens live in `web/src/styles/tokens.css` under `@theme`. Tailwind's default palette, fonts, radii, shadows and
 breakpoints are reset (`--color-*: initial` and so on): only tokens with a meaning exist.
 
 **Product mark.** The Lombada signature identifies Gazzpush on the splash, sign-in and outlet-creation screens. Inside
@@ -99,7 +99,7 @@ Every elevation is three layers: a 1 px ring (the rule), a contact shadow and a 
 - `.mono`: 12 px, `letter-spacing: .01em`. Section labels: 11.5 px mono, `letter-spacing: .08em`, uppercase.
 - **Slashless zero.** Only the digit 0 comes from `zero-<weight>.woff2` (about 0.6 KB each, derived from Atkinson
   Hyperlegible Next), loaded after the full faces with `unicode-range: U+30`. The mono face keeps its slashed zero.
-- Latin subset, `font-display: swap`, self-hosted in `web/src/estilo/fontes/` with their OFL licenses.
+- Latin subset, `font-display: swap`, self-hosted in `web/src/styles/fonts/` with their OFL licenses.
 
 ## 4. The hand-drawn mark (one per screen)
 
@@ -118,7 +118,7 @@ The blue pencil is the gesture of the whole direction, and it appears **once per
 - Claim marks in the text are **never** pencil (§5), and pencil never marks state.
 - The validation check is drawn in pencil too, but **green**: validation is green, blue is only action.
 - Strokes are generated SVG with graphite grain: `volta` (loop), `visto` (check) and `sublinhado` (underline) in
-  `web/src/kit/tracos.ts`, rendered by `web/src/kit/Lapis.tsx`. The loop draws itself on entry (dash offset, 300 ms,
+  `web/src/kit/strokes.ts`, rendered by `web/src/kit/Pencil.tsx`. The loop draws itself on entry (dash offset, 300 ms,
   `--lapis-dur`); everything is instant with `prefers-reduced-motion`.
 - The margin mark of the sidebar (§8) is a position indicator, not the hand-drawn mark.
 
@@ -236,7 +236,7 @@ Marks are a decoration layer over the text (editor decorations, never part of th
 
 - **Card layouts** (`src/lib/cards.ts`, `src/templates/card.html`): Cover, Text, Quote, Big number, List, and the proof
   layouts Document, Comparison and Timeline; 2 to 10 cards, the last always the call-to-action card. **Print
-  compositions** (`src/lib/estilo.ts`): Band, Column, Poster and Front page, only with the three brand colors, no
+  compositions** (`src/lib/style.ts`): Band, Column, Poster and Front page, only with the three brand colors, no
   gradients.
 - **Edit the cards** (`?editar=1`): card list, live preview from the render template, fields for the open card
   (`?card=`), each sentence with "Bound to" its fact and source, and a pinned blue-pencil "Save and check". A flagged
@@ -259,7 +259,7 @@ Marks are a decoration layer over the text (editor decorations, never part of th
 7. Every screen points to the next action.
 8. A loading failure never becomes a fact: "Didn't load · try again"; "1 source unavailable", never "source is down".
 9. Look at a screenshot before shipping a screen.
-10. Every screen in Portuguese and English: paired strings in place, `t(pt, en)` (`web/src/idioma.ts`). Portuguese
+10. Every screen in Portuguese and English: paired strings in place, `t(pt, en)` (`web/src/language.ts`). Portuguese
     first; English short, in sentence case, with the same tone. Post content (cards, caption, call-to-action, card
     preview) follows the **outlet's** language, not the viewer's. Never call `t()` at module top level.
 11. Post art appears as a proof (large, with a paper shadow), not as a 32 px icon; thumbnails only where they identify
@@ -282,13 +282,13 @@ Marks are a decoration layer over the text (editor decorations, never part of th
 
 ## 8. Proof desk
 
-The print-shop vocabulary. Classes in `web/src/estilo/prova.css`; components in `web/src/kit/Prova.tsx`; command
-palette in `web/src/casca/Paleta.tsx`.
+The print-shop vocabulary. Classes in `web/src/styles/proof.css`; components in `web/src/kit/Proof.tsx`; command
+palette in `web/src/shell/Palette.tsx`.
 
 | Element | Class | Rule |
 |---|---|---|
 | Desk | `.mesa` | Grid of proofs, `auto-fill`, 232 px minimum (four columns at 1440 px, two on mobile). To approve, Ready to post, Posted. |
-| Proof | `.prova` (`ProvaPost`) | 4:5 cover with `--shadow-prova`, queue number, mono caption, 18 px headline, wait ruler, action pinned to the foot. One link whose accessible name ends with the action. Hover/focus: rises 5 px, rotates −0.35°, `--shadow-eleva`. Carousels show a second sheet behind. |
+| Proof | `.prova` (`ProofPost`) | 4:5 cover with `--shadow-prova`, queue number, mono caption, 18 px headline, wait ruler, action pinned to the foot. One link whose accessible name ends with the action. Hover/focus: rises 5 px, rotates −0.35°, `--shadow-eleva`. Carousels show a second sheet behind. |
 | Wait ruler | `.regua` | 24 divisions; the graphite part is this proof's wait relative to the oldest. `aria-hidden`: the wait is written beside it. |
 | Crop marks | `.corte` | Four corners outside the art, on hover and always on the next action. Decoration only. |
 | Stamp | `.carimbo` | Status in mono uppercase, 1.5 px border, −2°, graphite (neither action nor validation): "Posted", "Simulated". |
@@ -300,9 +300,9 @@ palette in `web/src/casca/Paleta.tsx`.
 | List entrance | `.entra` | Rises 10 px, staggered; only new items animate. Skeletons shimmer, never blink. |
 | Buttons, fields | `.btn-tinta`, `.entrada` | The blue-pencil block has body and sinks 1 px when pressed; fields lighten to white on focus. |
 
-- **Prefetch** (`web/src/aquecer.ts`): 90 ms after hovering or focusing a proof, its piece enters the cache, so Review
+- **Prefetch** (`web/src/warmup.ts`): 90 ms after hovering or focusing a proof, its piece enters the cache, so Review
   opens without a skeleton.
-- **Single-key shortcuts** (`atalhoLivre` in `web/src/comum.tsx`). Review: **A** Approve, **E** Rewrite, **X** Reject
+- **Single-key shortcuts** (`freeShortcut` in `web/src/common.tsx`). Review: **A** Approve, **E** Rewrite, **X** Reject
   (they open the step, never decide), **J / K** next and previous, **← →** cards. Global: **N** New idea, **?** shortcut
   sheet. Only with focus in the content area, no modifiers, outside text fields, with no dialog or menu open (WCAG
   2.1.4).
@@ -310,26 +310,26 @@ palette in `web/src/casca/Paleta.tsx`.
   outlet or language, sign out. Accent- and case-insensitive; a live region announces the result count; no results
   shows "Nothing matches that." On a story's desk, ⌘K belongs to the editor.
 - **Width:** Review and Publish use two columns (art + 420 px) only from 1180 px (`xl`).
-- **Waitlist and sign-in** share `web/src/kit/Promessa.tsx`. Plan options come from `src/lib/planosTabela.ts`, the
+- **Waitlist and sign-in** share `web/src/kit/PromiseCard.tsx`. Plan options come from `src/lib/plansTable.ts`, the
   billing table, so no number is duplicated. A repeated e-mail gets the same answer: the page never reveals who is on
   the list.
 
 ## 9. Parts: detail on demand
 
-Long screens are split into parts without changing their look or removing features (`web/src/kit/Partes.tsx`).
+Long screens are split into parts without changing their look or removing features (`web/src/kit/Parts.tsx`).
 Budget in the initial state: up to 1400 px tall on desktop and 2000 px on mobile, with the main action visible at
 1440 × 900 and 390 × 844. Lists of real data are exempt.
 
 - **`Partes`:** master–detail from 1280 px (fixed 260 px list with name and summary, selected in `papel-2` and bold,
   never blue); accordion below (one open, others as ≥ 56 px rows with their summary).
-- **`Parte`:** a single collapsible row. `fixa` keeps it open on click; `manter={false}` unmounts it when closed.
+- **`Part`:** a single collapsible row. `fixa` keeps it open on click; `manter={false}` unmounts it when closed.
 - **Summary:** one line of mono with what's in effect or a count. Never a closed part without one. State lives in
   `aria-expanded`.
 - **Alerts never hide:** `tom` (`aviso`, `erro`) shows the full summary, `padrao` opens the alerting part on arrival
-  and `alertaPrimeiro` orders error, warning, rest. A part never closes under the user's hand when its alert resolves;
+  and `alertFirst` orders error, warning, rest. A part never closes under the user's hand when its alert resolves;
   a `role="alert"` in a hidden panel always opens it. The part holding the screen's action comes first.
 - **Invalid field:** saving opens the field's group and focuses the field.
-- **In the URL:** `useParte(param, padrao)` with `replace` and `preventScrollReset`; `nenhuma` means "all closed".
+- **In the URL:** `usePart(param, padrao)` with `replace` and `preventScrollReset`; `nenhuma` means "all closed".
   Parameters: `parte`, `grupo`, `modelo`, `previa`, `texto`, `pedir`, `card`, `ferramenta`, `ideias`, `ajuste`,
   `letra`, `dossie`, `lai`. Unknown values fall back to the default.
 - **Opened stays alive:** panels mount on first open and are then only `hidden`, so nothing typed or recorded is lost
@@ -344,7 +344,7 @@ Budget in the initial state: up to 1400 px tall on desktop and 2000 px on mobile
 ## 10. The blue-pencil reviewer
 
 An experienced editor reading over the shoulder, without chat and without a separate mode. Rules in
-`src/lib/revisor.ts` (pure functions); browser behavior in `web/src/materia/Revisor.tsx`.
+`src/lib/reviewer.ts` (pure functions); browser behavior in `web/src/story/Reviewer.tsx`.
 
 - **Questions are fixed and generated by code**, never by a model: free, no hallucination, identical for anyone cited,
   exactly testable. The only automatic insertion is a literal transcript quote, on request.
@@ -373,14 +373,14 @@ An experienced editor reading over the shoulder, without chat and without a sepa
 ## 11. Token usage panel
 
 An internal panel at `/admin/uso`, only for user ids listed in `ADMIN_USER_IDS`; for everyone else the route doesn't
-exist. Entry in the account menu. One row per model call in `uso_modelo` (`src/lib/uso.ts`). Workers AI doesn't
+exist. Entry in the account menu. One row per model call in `uso_modelo` (`src/lib/usage.ts`). Workers AI doesn't
 report tokens and is left out, and the screen says so. The screen polls every 3 s; on failure the last numbers stay
 visible with their age. No charts: exact numbers matter here. Journalists never see tokens.
 
 ## 12. Sheet on the desk: layout, motion, night mode
 
 Structure and motion for a dense work tool. Where this section differs from §§2–8, this section wins.
-Code: `web/src/estilo/rodada4.css`, `web/src/casca/Folio.tsx`, `web/src/movimento.ts`, `web/src/dica.ts`.
+Code: `web/src/styles/desk.css`, `web/src/shell/Folio.tsx`, `web/src/motion.ts`, `web/src/tooltip.ts`.
 
 ### Layout
 
@@ -396,9 +396,9 @@ Code: `web/src/estilo/rodada4.css`, `web/src/casca/Folio.tsx`, `web/src/moviment
   amber). In-production steps are graphite (progress isn't action), with a spinning registration cross. Order:
   sections, status card, Outlet group, account.
 - **Folio:** the line pinned at the top of the sheet, like the head of a newspaper page. Left: where you are (the
-  screen name appears once the title scrolls away; a piece or text puts the way back there with `NoFolio`). Right: what
+  screen name appears once the title scrolls away; a piece or text puts the way back there with `InFolio`). Right: what
   is happening ("2 producing", "1 source unavailable" in amber), date and place; screens can replace it with
-  `NoFolioDir` (e.g. the queue pager). On mobile the folio exists only when there is a way back.
+  `InFolioDir` (e.g. the queue pager). On mobile the folio exists only when there is a way back.
 - **Screen title:** 34 px on desktop with 12 px under the 44 px folio; 32 px on mobile.
 - **Registration cross:** the "working" signal instead of a spinner, from the same print vocabulary.
 - **Tooltip** (`data-dica`, `data-tecla`): name and shortcut of icon-only buttons. The first waits 450 ms; once one is
@@ -418,10 +418,10 @@ Code: `web/src/estilo/rodada4.css`, `web/src/casca/Folio.tsx`, `web/src/moviment
 - **Decision bar** (`.barra-decisao`), pinned on desktop and mobile: the chosen step opens inside it, one decision at a
   time; preset reasons are chips. The "Approved" stamp strikes for 400 ms only when Approve came from the pointer.
 - **Publish (manual accounts)** is a numbered script: send or download the images, copy the caption, post, report the
-  link. Done steps collapse (screen state only). From 1180 px, the desk plus `PainelPublicar` for the piece in `?post=`.
+  link. Done steps collapse (screen state only). From 1180 px, the desk plus `PanelPublish` for the piece in `?post=`.
 - **Posted** opens with the rhythm band (`.ritmo`): seven days of bars and today / week / ready counts, real posts
   only.
-- **Art travel:** `levarArte` on click and `arteQueVolta` on render (`web/src/kit/Prova.tsx`) give only the clicked
+- **Art travel:** `takeArt` on click and `artThatBack` on render (`web/src/kit/Proof.tsx`) give only the clicked
   proof the transition name.
 
 ### Motion
@@ -430,7 +430,7 @@ Code: `web/src/estilo/rodada4.css`, `web/src/casca/Folio.tsx`, `web/src/moviment
   `data-tecla` while the last action came from the keyboard, and CSS drops screen transitions, list entrance, sheets,
   menus and the stamp. Reviewer notes (§10) still draw: they respond to the text, not the shortcut.
 - **With the pointer:** the old screen leaves in 90 ms and the new one enters from 70 ms (almost no overlap); proof art
-  travels between desk and stage in 300 ms (`web/src/kit/arteVT.ts`); list entrance 260 ms with a 30 ms stagger; margin
+  travels between desk and stage in 300 ms (`web/src/kit/artTransition.ts`); list entrance 260 ms with a 30 ms stagger; margin
   mark 220 ms; pencil loop draws in 300 ms. Never `ease-in`.
 - **Press:** every button shrinks slightly when pressed (`scale`, added to the blue-pencil block's sink); list rows
   (`data-linha`) don't shrink, they darken a tone.
@@ -439,7 +439,7 @@ Code: `web/src/estilo/rodada4.css`, `web/src/casca/Folio.tsx`, `web/src/moviment
 
 ### Night mode
 
-- Chosen in the account menu (Appearance: Paper · At night), stored in the browser (`web/src/mesa.ts`). Never turns on
+- Chosen in the account menu (Appearance: Paper · At night), stored in the browser (`web/src/theme.ts`). Never turns on
   by itself, not even from the system theme: the identity is paper.
 - `data-mesa="noite"` on `<html>` swaps the tokens: the desk darkens, the sheet becomes light graphite, ink lightens
   (`#7FB2FF`) and the text on it darkens (`--color-sobre-tinta`). State colors keep their meaning with night values
@@ -449,8 +449,8 @@ Code: `web/src/estilo/rodada4.css`, `web/src/casca/Folio.tsx`, `web/src/moviment
 ## 13. Source material panel
 
 The reporter's folder, open next to the proof: sources, PDFs, recordings and clippings, read without leaving the
-text. Component `web/src/materia/Material.tsx`, placed by `web/src/materia/TextoMateria.tsx`; shared rules in
-`src/lib/recorte.ts`. The panel neither checks nor writes: it keeps literal passages and inserts them where the cursor
+text. Component `web/src/story/Material.tsx`, placed by `web/src/story/StoryText.tsx`; shared rules in
+`src/lib/clipping.ts`. The panel neither checks nor writes: it keeps literal passages and inserts them where the cursor
 is, with the citation resolved.
 
 - **Where:** from 1180 to 1535 px, a 360 px column left of the sheet, replacing the right panel; from 1536 px, three

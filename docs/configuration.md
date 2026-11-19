@@ -43,7 +43,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 Each outlet can bring its own keys under **Publication › AI keys**, stored encrypted with `TOKEN_ENC_KEY`. A server key is a
 fallback for outlets without their own; when you set one, every outlet that has no key of its own spends from your
 account. Leave server keys empty if each outlet should pay for its own usage. Providers, model ids and prices are
-defined in one place: [`src/lib/provedoresTabela.ts`](../src/lib/provedoresTabela.ts).
+defined in one place: [`src/lib/providersTable.ts`](../src/lib/providersTable.ts).
 
 | Variable | Role | Without it |
 |---|---|---|
@@ -95,7 +95,7 @@ to your Cloudflare account.
 ## Billing
 
 Only relevant if you run Gazzpush as a paid service (`INSTALACAO_PROPRIA` unset). Plans and quotas are defined in
-[`src/lib/planosTabela.ts`](../src/lib/planosTabela.ts). See [integrations](integrations.md#stripe).
+[`src/lib/plansTable.ts`](../src/lib/plansTable.ts). See [integrations](integrations.md#stripe).
 
 | Variable | Description |
 |---|---|

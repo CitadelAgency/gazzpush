@@ -1,4 +1,4 @@
-// Módulos não-JS importados pelo bundle (ver "rules" no wrangler.jsonc).
+// Non-JS modules imported by the bundle (see "rules" in wrangler.jsonc).
 declare module '*.html' {
   const conteudo: string;
   export default conteudo;

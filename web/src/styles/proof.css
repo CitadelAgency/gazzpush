@@ -1,0 +1,276 @@
+/* The proof desk: Gazzpush's print-shop vocabulary (DESIGN.md §8). The post's art is the product, so it appears large,
+   as a proof on the desk: paper with a real shadow, crop marks in the corners, a ruler to measure the wait, a stamp for
+   the state. All in opaque paper, no glass, no brush. The classes live in the `components` layer: a Tailwind utility,
+   when it comes along, still wins. */
+@layer components {
+  /* ── The desk: a grid of proofs ─────────────────────────────────────────────────────────────────────────────── */
+  .mesa { display: grid; gap: 34px 22px; grid-template-columns: repeat(auto-fill, minmax(var(--prova-min, 232px), 1fr)); }
+  @media (max-width: 599px) { .mesa { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 16px; } }
+
+  /* Rail: a row that scrolls sideways, with snapping (the Ideas proofs). On desktop it all fits on one line. */
+  .trilho { display: grid; grid-auto-flow: column; grid-auto-columns: var(--prova-min, 198px); gap: 22px; margin: 0 -16px; padding: 20px 16px 22px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: 16px; }
+  .trilho > li { scroll-snap-align: start; }
+  /* When the rail scrolls, the right end fades: a card cut in half does not become a loose "piece of text". */
+  .trilho { -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 22px), transparent 100%); mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 22px), transparent 100%); }
+  @media (max-width: 1023px) { .trilho { margin-inline: -20px; padding-inline: 20px; scroll-padding-inline: 20px; --prova-min: 156px; gap: 16px; } }
+
+  /* ── The proof: art in 4:5 + caption ────────────────────────────────────────────────────────────────────────── */
+  .prova { position: relative; display: grid; grid-template-rows: auto 1fr; align-content: start; gap: 18px; height: 100%; border-radius: 6px; color: var(--color-texto); text-decoration: none; }
+  .prova-arte {
+    position: relative; display: block; isolation: isolate; aspect-ratio: 4 / 5; border-radius: 4px; background-color: var(--color-papel-2);
+    box-shadow: var(--shadow-prova); transition: transform 200ms var(--ease-saida), box-shadow 200ms var(--ease-saida);
+  }
+  .prova-arte > img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+  a.prova:focus-visible .prova-arte, .prova-li:focus-within .prova-arte { transform: translateY(-5px) rotate(-.35deg); box-shadow: var(--shadow-eleva), 0 0 0 1px rgb(21 23 27 / .08); }
+  @media (hover: hover) { a.prova:hover .prova-arte, .prova-li:hover .prova-arte { transform: translateY(-5px) rotate(-.35deg); box-shadow: var(--shadow-eleva), 0 0 0 1px rgb(21 23 27 / .08); } }
+  /* Carousel: a sheet behind the cover, like the pile of cards. The sheet has the same size and sits a little crooked. */
+  .prova-arte[data-pilha]::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 4px; background: var(--color-branco);
+    transform: translate(5px, -5px) rotate(1.6deg); box-shadow: 0 0 0 1px rgb(21 23 27 / .1), 0 6px 10px -6px rgb(21 23 27 / .3);
+    transition: transform 200ms var(--ease-saida);
+  }
+  a.prova:focus-visible .prova-arte[data-pilha]::before { transform: translate(8px, -7px) rotate(2.8deg); }
+  @media (hover: hover) { a.prova:hover .prova-arte[data-pilha]::before, .prova-li:hover .prova-arte[data-pilha]::before { transform: translate(8px, -7px) rotate(2.8deg); } }
+  /* Crop marks: they appear on hover and always stay on the proof that is the next action. */
+  .prova-arte.corte::after { opacity: 0; transition: opacity 240ms; }
+  a.prova:focus-visible .corte::after, .prova-li:focus-within .corte::after, .prova[data-proxima] .corte::after { opacity: 1; }
+  @media (hover: hover) { a.prova:hover .corte::after, .prova-li:hover .corte::after { opacity: 1; } }
+
+  /* The proof's action: a 44 px row, centred text, with or without the pencil loop (the next one's is 40 px + 2 on each side). */
+  .prova .acao-lapis { display: inline-flex; align-items: center; min-height: 40px; margin-block: 2px; padding-block: 0; }
+
+  /* The pencil loop fits the narrow mobile column: smaller letters and breathing room, without breaking the line. */
+  @media (max-width: 599px) { .prova .acao-lapis { padding-inline: 12px; font-size: 15px; white-space: nowrap; } }
+
+  /* Queue number and format, on the caption line (the art stays clean, without covering the card's brand or date). */
+  .prova-n {
+    display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 4px; background: var(--color-texto-forte); color: var(--color-branco);
+    font: 400 11.5px/1 var(--font-mono); letter-spacing: .04em;
+  }
+  .prova-fmt { display: inline-flex; align-items: center; gap: 3px; color: var(--color-texto-forte); }
+  .prova-fmt svg { width: 15px; height: 15px; }
+
+  /* No art yet (producing): hatched paper, like a blank proof. */
+  .prova-vaga {
+    position: absolute; inset: 0; z-index: 1; display: grid; place-content: center; justify-items: center; gap: 8px; border-radius: inherit; color: var(--color-apoio);
+    background: repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--color-texto-forte) 6%, transparent) 9px 10px), var(--color-papel-2);
+  }
+
+  /* The proof's caption */
+  .prova-corpo { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; min-width: 0; height: 100%; }
+  .prova-corpo > .acao { margin-top: auto; padding-top: 6px; }
+  .prova-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--color-apoio); }
+
+  /* Mobile (168 px column): the number and the first part on the same line; the other parts, one per line, cut with an
+     ellipsis if they do not fit. Without the separating dot, which would hang at the end of the line. */
+  @media (max-width: 599px) {
+    .prova-meta { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 0 8px; font-size: 11.5px; letter-spacing: 0; }
+    .prova-meta > .prova-n { margin-top: 1px; }
+    .prova-meta > span:last-child { min-width: 0; line-height: 1.5; }
+    .prova-meta > span:last-child > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .prova-meta .sep { display: none; }
+    .prova-meta-solo { grid-template-columns: minmax(0, 1fr); }
+    .prova-espera > span:last-child { display: block; }
+    .prova-espera .sep { display: none; }
+  }
+  .prova-manchete {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; color: var(--color-texto-forte);
+    font-size: 18px; font-weight: 700; letter-spacing: -.018em; line-height: 1.17; text-wrap: balance;
+  }
+  @media (max-width: 599px) { .prova-manchete { font-size: 16px; -webkit-line-clamp: 5; } }
+  a.prova:focus-visible .prova-manchete { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: var(--color-fio-forte); }
+  @media (hover: hover) { a.prova:hover .prova-manchete { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: var(--color-fio-forte); } }
+
+  /* Wait ruler: 24 divisions; the filled part is this proof's wait relative to the oldest in the queue. */
+  .regua { position: relative; display: block; width: 100%; max-width: 144px; height: 10px; color: var(--color-fio-forte); }
+  .regua, .regua > i {
+    background-image: linear-gradient(90deg, currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px);
+    background-size: 6px 5px, 24px 10px; background-position: 0 100%, 0 100%; background-repeat: repeat-x;
+  }
+  .regua > i { position: absolute; inset: 0 auto 0 0; display: block; color: var(--color-texto-forte); }
+
+  /* A list of proofs as li: the li holds the position and the entrance stair. */
+  .prova-li { position: relative; list-style: none; min-width: 0; }
+
+  /* ── Lead sheet: the suggested idea, on white paper on the desk ─────────────────────────────────────────────── */
+  /* Short rail (Ideas): the small proof beside the text, so ready posts do not compete with the ideas for the first fold.
+     The art here identifies, it is not checked: reading happens in review. */
+  .trilho-curto { --prova-min: 320px; gap: 24px; padding-block: 14px 16px; }
+  .trilho-curto .prova { grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: auto; gap: 16px; }
+  .trilho-curto .prova-corpo { gap: 3px; }
+  .trilho-curto .prova-manchete { -webkit-line-clamp: 2; }
+  .trilho-curto .prova-corpo > .acao { padding-top: 0; }
+  @media (max-width: 1023px) { .trilho-curto { --prova-min: 300px; gap: 16px; } }
+
+  .pautas { display: grid; gap: 20px; margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(auto-fill, minmax(min(100%, 318px), 1fr)); }
+  .pauta {
+    position: relative; display: flex; flex-direction: column; gap: 11px; min-width: 0; padding: 20px 22px 14px; border-radius: 6px; background: var(--color-branco);
+    box-shadow: var(--shadow-curta); transition: box-shadow 200ms var(--ease-saida), transform 200ms var(--ease-saida);
+  }
+  .pauta:focus-within { box-shadow: var(--shadow-eleva); transform: translateY(-2px); }
+  @media (hover: hover) { .pauta:hover { box-shadow: var(--shadow-eleva); transform: translateY(-2px); } }
+  /* The actions sit at the bottom, aligned across the sheets of the same row, separated by a rule. */
+  .pauta-acoes { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--color-fio); }
+  .pauta > .pauta-acoes:first-child { margin-top: 0; }
+
+  /* Loading: blank proofs in place. */
+  .prova-esq .prova-arte { box-shadow: none; }
+
+  /* ── Stamp over the art (Posted): straddling the cover's bottom edge, so it does not cover the card's text ─────────────────── */
+  .prova-carimbo { position: absolute; left: 14px; bottom: -12px; z-index: 3; background: var(--color-papel); }
+
+  /* ── Empty sheet: a blank, dashed proof with the crop marks ───────────────────────────────────────────────── */
+  .folha-vazia {
+    position: relative; display: grid; place-content: center; justify-items: center; gap: 6px; width: 148px; aspect-ratio: 4 / 5; flex: none;
+    border-radius: 4px; color: var(--color-apoio); text-align: center;
+    background: repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--color-texto-forte) 4.5%, transparent) 9px 10px), var(--color-papel);
+    border: 1.5px dashed var(--color-fio-forte);
+  }
+  .folha-vazia.corte { --corte-fora: 12px; }
+}
+
+/* ── Command palette (⌘K) and the sidebar's margin mark ──────────────────────────────────────────────────── */
+@layer components {
+  .paleta {
+    margin: 11vh auto auto; width: min(640px, calc(100% - 24px)); max-height: min(70dvh, 560px); padding: 0; border: 0; border-radius: 12px; overflow: hidden;
+    background: var(--color-papel); color: var(--color-texto); box-shadow: var(--shadow-eleva), 0 44px 90px -32px rgb(21 23 27 / .55);
+  }
+  .paleta[open] { display: flex; flex-direction: column; }
+  .paleta::backdrop { background: rgb(21 23 27 / .38); }
+  /* The palette opens ready, without animation: it is used all day, and animation there becomes delay (DESIGN.md §12). */
+  .paleta-campo { display: flex; align-items: center; gap: 12px; padding: 0 16px; box-shadow: 0 1px 0 var(--color-fio); }
+  .paleta-entrada { flex: 1; min-width: 0; min-height: 58px; border: 0; background: transparent; color: var(--color-texto-forte); font-size: 17px; outline: none; }
+  .paleta-lista { flex: 1; margin: 0; padding: 4px 8px 8px; list-style: none; overflow-y: auto; overscroll-behavior: contain; }
+  .paleta-item { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; cursor: pointer; }
+  .paleta-item[aria-selected="true"] { background: var(--color-papel-2); color: var(--color-texto-forte); }
+  .paleta-item[aria-selected="true"]::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 0 3px 3px 0; background: var(--color-texto-forte); }
+  .paleta-pe { display: flex; align-items: center; gap: 18px; padding: 10px 16px; background: var(--color-papel-2); box-shadow: 0 -1px 0 var(--color-fio); color: var(--color-apoio); font-size: 12px; }
+
+  /* Margin mark: the reviewer's stroke beside the open section. It has a transition name: on changing sections, it
+     slides to the new one instead of reappearing. */
+  .marca-margem {
+    position: absolute; left: 0; top: 50%; width: 3px; height: 20px; margin-top: -10px; border-radius: 0 3px 3px 0; background: var(--color-tinta);
+    view-transition-name: marca-nav;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(marca-nav) { animation-duration: 220ms; animation-timing-function: var(--ease-saida); }
+}
+
+/* ── The review desk: the art's stage, the proof strips ─────────────────────────────────────────────────────── */
+@layer components {
+  .palco { position: relative; min-width: 0; }
+  .palco-topo { display: none; }
+  .palco-arte { position: relative; margin-inline: auto; }
+  @media (min-width: 1024px) {
+    /* Drawing table: papel-2 with a dot grid, the proof in the middle with the crop marks, the dimension on top. */
+    .palco {
+      padding: 20px 30px 14px; border-radius: 10px; background-color: var(--color-papel-2);
+      background-image: radial-gradient(color-mix(in srgb, var(--color-texto-forte) 10%, transparent) 1px, transparent 1.2px); background-size: 14px 14px;
+      box-shadow: inset 0 0 0 1px rgb(21 23 27 / .05), inset 0 1px 0 rgb(255 255 255 / .6);
+    }
+    .palco-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 24px; }
+    .palco-topo > p { color: var(--color-apoio); letter-spacing: .06em; text-transform: uppercase; font-size: 11px; }
+    .palco-acoes { display: flex; gap: 8px; }
+    .palco-acoes:empty { display: none; }
+    .palco-arte { width: min(100%, 404px); --corte-fora: 14px; --corte-lado: 9px; --corte-cor: color-mix(in srgb, var(--color-texto-forte) 60%, transparent); }
+  }
+  @media (max-width: 1023px) { .palco-arte.corte::after { display: none; } }
+
+  .tiras { display: flex; gap: 10px; max-width: 100%; padding: 9px 7px 7px; overflow-x: auto; }
+  .tira {
+    position: relative; flex: none; width: 44px; aspect-ratio: 4 / 5; padding: 0; border: 0; border-radius: 3px; overflow: hidden; cursor: pointer; background: var(--color-papel-2);
+    box-shadow: var(--shadow-curta); opacity: .7; transition: opacity 160ms, transform 200ms var(--ease-saida), box-shadow 160ms, scale 140ms var(--ease-saida);
+  }
+  .tira img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  @media (hover: hover) { .tira:hover { opacity: 1; transform: translateY(-2px); } }
+  .tira[aria-current="true"] { opacity: 1; transform: translateY(-3px); box-shadow: 0 0 0 2px var(--color-papel), 0 0 0 4px var(--color-texto-forte), 0 8px 12px -6px rgb(21 23 27 / .35); }
+  @media (min-width: 1024px) { .tira[aria-current="true"] { box-shadow: 0 0 0 2px var(--color-papel-2), 0 0 0 4px var(--color-texto-forte), 0 8px 12px -6px rgb(21 23 27 / .35); } }
+}
+
+@media (min-width: 1180px) and (min-height: 820px) { .palco-fixo { position: sticky; top: calc(var(--topo) + 12px); align-self: start; } }
+
+/* The desk's base: "1 / 4 · Cover", the proof strips and the arrows: counter and arrows on top, strips below, end to
+   end (on desktop, the strips centred when they fit). */
+@layer components {
+  .palco-baixo { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "n setas" "tiras tiras"; align-items: center; gap: 0 8px; margin-top: 8px; }
+  .palco-baixo .tiras { justify-content: flex-start; }
+  @media (min-width: 1024px) {
+    /* On desktop also on two lines: the counter (of variable width) does not push the strips on each card. */
+    .palco-baixo { margin-top: 14px; }
+    .palco-baixo .tiras { justify-content: safe center; }
+  }
+}
+
+/* ── The promise demo, on the sign-in screen (kit/ProofDemo) ──────────────────────────────────────────────────────
+   A fixed size (480 × 330) so the linking stroke lands in place. The frame decides where it appears and at what scale:
+   on mobile and tablet (< 1024 px), scaled to fit (72 % at 390 px); in two narrow columns (1024 to 1179 px), hidden;
+   from 1180 px up, whole. The card's numbers have no zero: the screen font slashes the zero and the real card uses
+   another font. */
+@layer components {
+  /* contain: inline-size: the demo's fixed width (480 px, before scaling) does not widen the sign-in screen's column. */
+  .demo-moldura { --esc: 1; width: 100%; min-width: 0; contain: inline-size; height: calc(330px * var(--esc)); margin-top: 6px; }
+  @media (max-width: 520px) { .demo-moldura { --esc: .72; } }
+  @media (max-width: 380px) { .demo-moldura { --esc: .64; } }
+  @media (min-width: 1024px) and (max-width: 1179px) { .demo-moldura { display: none; } }
+  @media (min-width: 1180px) { .demo-moldura { margin-top: 12px; } }
+  .demo { position: relative; width: 480px; height: 330px; transform: scale(var(--esc, 1)); transform-origin: 0 0; }
+  .demo-card {
+    position: absolute; left: 0; top: 0; display: flex; flex-direction: column; width: 232px; height: 290px; padding: 16px 18px; border-radius: 6px; color: #fffcf6;
+    background: linear-gradient(165deg, #16213a 0%, #0c1322 100%); box-shadow: var(--shadow-prova); animation: entra 620ms var(--ease-saida) 120ms both;
+  }
+  .demo-topo { display: flex; justify-content: space-between; margin: 0; font: 400 10.5px/1.2 var(--font-sans); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .82; }
+  .demo-numero { margin: 22px 0 0; color: #ff8a3d; font: 700 112px/.9 var(--font-sans); letter-spacing: -.055em; }
+  .demo-frase { margin: 14px 0 0; font-size: 16px; font-weight: 700; line-height: 1.32; letter-spacing: -.01em; }
+  .demo-risco { color: #fffcf6; }
+  .demo-card .lapis-sublinhado { bottom: -9px; }
+  .demo-risco, .demo-card .lapis { --lapis-atraso: 1000ms; }
+  .demo-rodape { position: absolute; left: 18px; bottom: 14px; margin: 0; font-size: 10px; opacity: .78; }
+  .demo-ligacao { position: absolute; inset: 0; width: 480px; height: 330px; color: var(--color-tinta); pointer-events: none; overflow: visible; }
+  .demo-ligacao path { stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: lapis-desenha 620ms var(--ease-saida) 1700ms both; }
+  .demo-ligacao .demo-seta { animation-delay: 2250ms; animation-duration: 260ms; }
+  .demo-fonte {
+    position: absolute; left: 262px; top: 150px; width: 218px; padding: 13px 15px 11px; border-radius: 6px; background: var(--color-branco);
+    box-shadow: var(--shadow-eleva); animation: entra 560ms var(--ease-saida) 2200ms both;
+  }
+  .demo-fonte-nome { margin: 0 0 6px; color: var(--color-apoio); font: 400 11px/1.3 var(--font-mono); letter-spacing: .02em; }
+  .demo-trecho { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--color-texto); }
+  .demo-trecho mark {
+    padding: 0 1px; color: var(--color-texto-forte); background: linear-gradient(var(--color-verde-claro), var(--color-verde-claro)) no-repeat 0 0 / 0% 100%;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone; animation: demo-marca 900ms ease-out 2800ms forwards;
+  }
+  @keyframes demo-marca { to { background-size: 100% 100%; } }
+  .demo-ok { display: flex; align-items: center; gap: 4px; margin: 8px 0 0; color: var(--color-verde); font-size: 13px; font-weight: 700; }
+  .demo-ok .lapis { --lapis-atraso: 3500ms; }
+  @media (prefers-reduced-motion: reduce) {
+    .demo-card, .demo-fonte, .demo-ligacao path { animation: none !important; }
+    .demo-ligacao path { stroke-dashoffset: 0; }
+    .demo-trecho mark { animation: none; background-size: 100% 100%; }
+  }
+}
+
+/* Sign in: the form on a sheet of white paper, standing on the desk (desktop only; on mobile the form is the screen). */
+@layer components {
+  @media (min-width: 1024px) {
+    .folha-entrar { padding: 34px 34px 30px; border-radius: 12px; background: var(--color-branco); box-shadow: var(--shadow-eleva), 0 36px 70px -36px rgb(21 23 27 / .35); }
+    .folha-entrar .entrada { background: var(--color-papel-2); }
+  }
+}
+
+/* Crop marks only where there is margin for them (≥ 1024 px): the card preview in Brand, in editing and in Reels. */
+@layer components {
+  .corte-so-lg::after { display: none; }
+  @media (min-width: 1024px) { .corte-so-lg::after { display: block; } .corte-so-lg { --corte-fora: 12px; --corte-lado: 8px; } }
+}
+
+/* A stamp on the publish desk: approved or posted; it lands once (grows, settles) when it was just approved. */
+@layer components {
+  .palco-carimbo { display: none; }
+  @media (min-width: 1024px) {
+    .palco-carimbo { position: absolute; top: 14px; right: 24px; z-index: 3; display: inline-flex; padding: 4px 10px 3px; background: var(--color-papel-2); font-size: 12px; }
+  }
+  /* The stamp lands in 200 ms: grows a little and settles, without bounce (applies to the approved proof and to "Ready to publish"). */
+  .carimbo-bate { animation: carimbo-bate 200ms cubic-bezier(.2, .9, .3, 1.1) both; }
+  @keyframes carimbo-bate { from { opacity: .3; transform: rotate(-2.2deg) scale(1.5); } to { opacity: 1; transform: rotate(-2.2deg) scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .carimbo-bate { animation: none; } }
+}

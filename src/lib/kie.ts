@@ -1,16 +1,16 @@
 import type { Env } from '../env';
-import { PROVEDORES } from './provedoresTabela';
+import { PROVIDERS } from './providersTable';
 
-// Grok image-edit via Kie, com imagem de referência de estilo. A chave vem
-// resolvida (a do veículo ou a do servidor, src/lib/provedores.ts). `KIE_URL` troca a base da API no teste.
-export const KIE_MODEL = PROVEDORES.kie.modelo;
-export const KIE_CREDITO_USD = PROVEDORES.kie.preco.creditoUsd;
-export const KIE_RESERVA_USD = PROVEDORES.kie.preco.imagemUsd;   // custo típico de 1 imagem; usado quando o provedor não informa créditos
+// Grok image-edit through Kie, with a style reference image. The key arrives resolved (the outlet's or the server's,
+// src/lib/providers.ts). `KIE_URL` swaps the API base in tests.
+export const KIE_MODEL = PROVIDERS.kie.modelo;
+export const KIE_CREDIT_USD = PROVIDERS.kie.preco.creditoUsd;
+export const KIE_RESERVE_USD = PROVIDERS.kie.preco.imagemUsd;   // typical cost of one image; used when the provider does not report credits
 const api = (env: Env) => `${env.KIE_URL ? env.KIE_URL.replace(/\/$/, '') : 'https://api.kie.ai'}/api/v1/jobs/`;
 const UPLOAD = 'https://kieai.redpandaai.co/api/file-base64-upload';
 const MAX_BYTES = 25_000_000;
 
-export interface TarefaKie {
+export interface TaskKie {
   state: string;                 // waiting | queuing | generating | success | fail
   resultUrls: string[];
   creditsConsumed: number | null;
@@ -27,56 +27,56 @@ export function b64(bytes: ArrayBuffer) {
 
 function httpsUrl(value: string) {
   const url = new URL(value);
-  if (url.protocol !== 'https:' || url.username || url.password) throw new Error(`kie: URL inválida ${url.hostname}`);
+  if (url.protocol !== 'https:' || url.username || url.password) throw new Error(`kie: invalid URL ${url.hostname}`);
   return url.href;
 }
 
-async function chamar(chave: string, url: string, body?: unknown): Promise<Record<string, any>> {
-  if (!chave) throw new Error('KIE_API_KEY ausente');
-  // Workers não implementam redirect:'error'; 'manual' + checagem de status dá o mesmo efeito (credencial nunca segue redirect).
+async function call(key: string, url: string, body?: unknown): Promise<Record<string, any>> {
+  if (!key) throw new Error('KIE_API_KEY missing');
+  // Workers do not implement redirect:'error'; 'manual' plus a status check has the same effect (credentials never follow a redirect).
   const res = await fetch(url, {
     method: body ? 'POST' : 'GET',
     redirect: 'manual',
-    headers: { authorization: `Bearer ${chave}`, 'content-type': 'application/json' },
+    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
     signal: AbortSignal.timeout(90_000),
   });
   if (!res.ok) { await res.body?.cancel(); throw new Error(`kie HTTP ${res.status}`); }
   const data = await res.json<Record<string, any>>();
-  // jobs/* responde {code:200,...}; o upload responde {success:true,...}
-  // Só o código (402 = sem crédito, lido pela revisão): a mensagem do provedor fica fora do evento e do log.
-  if (!(Number(data.code) === 200 || data.success === true)) throw new Error(`kie recusou: código ${data.code ?? '?'}`);
+  // jobs/* answers {code:200,...}; the upload answers {success:true,...}
+  // Code only (402 = out of credit, read by review): the provider's message stays out of the event and the log.
+  if (!(Number(data.code) === 200 || data.success === true)) throw new Error(`kie refused: code ${data.code ?? '?'}`);
   return data;
 }
 
-/** Tipo da referência pelos bytes (a aba Marca aceita PNG e JPEG). */
-export const tipoReferencia = (bytes: ArrayBuffer) => {
+/** Reference type from its bytes (the Brand tab accepts PNG and JPEG). */
+export const referenceType = (bytes: ArrayBuffer) => {
   const b = new Uint8Array(bytes, 0, Math.min(3, bytes.byteLength));
   return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff ? { mime: 'image/jpeg', ext: 'jpg' } : { mime: 'image/png', ext: 'png' };
 };
 
-/** Sobe a imagem de referência (PNG ou JPEG ≤ 10 MB) e devolve URL https que o modelo consegue ler. */
-export async function enviarReferencia(chave: string, bytes: ArrayBuffer, base: string): Promise<string> {
-  if (bytes.byteLength > 10_000_000) throw new Error('referência excede 10 MB');
-  const { mime, ext } = tipoReferencia(bytes);
-  const data = await chamar(chave, UPLOAD, { base64Data: `data:${mime};base64,${b64(bytes)}`, uploadPath: 'images/redacao', fileName: `${base}.${ext}` });
+/** Uploads the reference image (PNG or JPEG ≤ 10 MB) and returns an https URL the model can read. */
+export async function sendReference(key: string, bytes: ArrayBuffer, base: string): Promise<string> {
+  if (bytes.byteLength > 10_000_000) throw new Error('reference exceeds 10 MB');
+  const { mime, ext } = referenceType(bytes);
+  const data = await call(key, UPLOAD, { base64Data: `data:${mime};base64,${b64(bytes)}`, uploadPath: 'images/redacao', fileName: `${base}.${ext}` });
   const url = data.data?.downloadUrl;
-  if (typeof url !== 'string') throw new Error('kie: upload sem downloadUrl');
+  if (typeof url !== 'string') throw new Error('kie: upload has no downloadUrl');
   return httpsUrl(url);
 }
 
-export async function criarTarefa(env: Env, chave: string, prompt: string, referenciaUrl: string): Promise<string> {
-  if (!prompt || prompt.length > 20_000) throw new Error('prompt de imagem inválido');
-  const data = await chamar(chave, `${api(env)}createTask`, { model: KIE_MODEL, input: { prompt, image_urls: [httpsUrl(referenciaUrl)], aspect_ratio: '2:3' } });
+export async function createTask(env: Env, key: string, prompt: string, referenceUrl: string): Promise<string> {
+  if (!prompt || prompt.length > 20_000) throw new Error('invalid image prompt');
+  const data = await call(key, `${api(env)}createTask`, { model: KIE_MODEL, input: { prompt, image_urls: [httpsUrl(referenceUrl)], aspect_ratio: '2:3' } });
   const taskId = data.data?.taskId;
-  if (typeof taskId !== 'string' || !/^[\w-]{1,200}$/.test(taskId)) throw new Error('kie: createTask sem taskId');
+  if (typeof taskId !== 'string' || !/^[\w-]{1,200}$/.test(taskId)) throw new Error('kie: createTask has no taskId');
   return taskId;
 }
 
-export async function consultarTarefa(env: Env, chave: string, taskId: string): Promise<TarefaKie> {
-  const data = await chamar(chave, `${api(env)}recordInfo?taskId=${encodeURIComponent(taskId)}`);
+export async function queryTask(env: Env, key: string, taskId: string): Promise<TaskKie> {
+  const data = await call(key, `${api(env)}recordInfo?taskId=${encodeURIComponent(taskId)}`);
   const d = data.data ?? {};
-  if (d.taskId !== taskId || typeof d.state !== 'string') throw new Error('kie: tarefa divergente');
+  if (d.taskId !== taskId || typeof d.state !== 'string') throw new Error('kie: task mismatch');
   let result = d.resultJson ?? {};
   if (typeof result === 'string') result = JSON.parse(result);
   const credits = Number(d.creditsConsumed);
@@ -89,12 +89,12 @@ export async function consultarTarefa(env: Env, chave: string, taskId: string): 
   };
 }
 
-/** Download do CDN sem credencial e sem seguir redirect. */
-export async function baixarImagem(url: string): Promise<ArrayBuffer> {
+/** CDN download without credentials and without following redirects. */
+export async function downloadImage(url: string): Promise<ArrayBuffer> {
   const res = await fetch(httpsUrl(url), { redirect: 'manual', signal: AbortSignal.timeout(90_000) });
   if (!res.ok) { await res.body?.cancel(); throw new Error(`kie: download HTTP ${res.status}`); }
-  if (Number(res.headers.get('content-length')) > MAX_BYTES) { await res.body?.cancel(); throw new Error('imagem excede limite'); }
+  if (Number(res.headers.get('content-length')) > MAX_BYTES) { await res.body?.cancel(); throw new Error('image exceeds limit'); }
   const bytes = await res.arrayBuffer();
-  if (bytes.byteLength > MAX_BYTES || bytes.byteLength < 20) throw new Error('imagem com tamanho inválido');
+  if (bytes.byteLength > MAX_BYTES || bytes.byteLength < 20) throw new Error('image has an invalid size');
   return bytes;
 }

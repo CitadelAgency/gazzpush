@@ -17,7 +17,7 @@ Each outlet has a `modo` that decides what is monitored and how leads are filter
 |---|---|---|
 | `local` | Local news pages and portals | Filters by area: a city (from the IBGE list) is required, a neighborhood is optional (`/areas`). |
 | `tematico` | Thematic outlets (entertainment, tech, ...) | Filters by topic and ignores geography. |
-| `autoral` | Individual journalists and authors | Created from a Substack URL (`src/lib/autoral.ts`). Every text from the author's feed becomes a lead, drafting follows the author's voice, cards are signed with their name, and the **Texts** section (story desk) is enabled. |
+| `autoral` | Individual journalists and authors | Created from a Substack URL (`src/lib/author.ts`). Every text from the author's feed becomes a lead, drafting follows the author's voice, cards are signed with their name, and the **Texts** section (story desk) is enabled. |
 
 > Triage of news items is designed for Brazilian news (IBGE cities). An English-language outlet fits best in `autoral`
 > or `tematico` mode.
@@ -30,21 +30,21 @@ cron */15 → due sources → Queue → fetch + parse RSS → documents (D1) + r
 ```
 
 - **Monitor.** Every 15 minutes, due sources are queued (`src/monitor/scheduled.ts`, `src/monitor/consumer.ts`). Sites
-  that block plain `fetch` (WAF `403`/`429`) can be read through Browser Rendering (`src/lib/navegador.ts`); it is
+  that block plain `fetch` (WAF `403`/`429`) can be read through Browser Rendering (`src/lib/browser.ts`); it is
   slower and costlier, so it is a fallback, not the default.
-- **Triage** (`src/lib/triagem.ts`) uses an open model on Workers AI with a JSON schema. If the model ignores the schema,
+- **Triage** (`src/lib/triage.ts`) uses an open model on Workers AI with a JSON schema. If the model ignores the schema,
   validation fails and the queue retries.
 - **Spans** (`src/lib/spans.ts`). The schema is restricted *before* decoding: the model can only choose passage ids,
   city and neighborhood names and dates that exist literally in the text.
 - **Dedupe** (`src/lib/dedupe.ts`). Besides the exact hash, a semantic check with `bge-m3` embeddings (index
-  `redacao-dedupe`, one namespace per outlet) drops an item whose nearest neighbor (cosine ≥ 0.92, `LIMIAR_SEMANTICO`)
+  `redacao-dedupe`, one namespace per outlet) drops an item whose nearest neighbor (cosine ≥ 0.92, `THRESHOLD_SEMANTIC`)
   is a triaged document or live lead from the last 3 days. Any AI or Vectorize failure is logged as `dedupe.falha` and
   triage continues without this step.
 - **Leads** appear in **Ideas**.
 
 ### Manual intake: New idea
 
-**New idea** (`src/lib/nova.ts`) lets the operator bring a story: a link, a short written account, or a screenshot. It
+**New idea** (`src/lib/intake.ts`) lets the operator bring a story: a link, a short written account, or a screenshot. It
 becomes a `manual` lead at the top of Ideas through the same path as the monitor (article → spans → triage → facts),
 without the area filter. Idempotent by content hash. With Google Docs connected, a document can be brought in the same
 way.
@@ -56,13 +56,13 @@ the mark become leads with `origem = 'site'`: no area filter, the full body as f
 starts immediately as a carousel so they reach **To approve**. Items already in the feed before the mark are skipped
 (`fontes.propria_desde`); items without a date follow the normal path.
 
-Ceiling: `MAX_AUTO_DIA`, 30 pieces per day (Brasília time). Beyond that, the lead stays in Ideas marked "from your site".
+Ceiling: `MAX_AUTO_DAY`, 30 pieces per day (Brasília time). Beyond that, the lead stays in Ideas marked "from your site".
 Each piece is still bounded by `MAX_CUSTO_PECA_USD`; with 30 pieces a day, that is the cost that multiplies.
 
 ### Daily digest
 
 On the **Sources** tab, "Daily digest at 18:00" (admin); in Ideas, "Summarize the day" (editor) calls the same
-function (`src/lib/resumo.ts`, `POST /resumo`, `PATCH /resumo`). The top 5 leads by `score` from the last 24 hours (news
+function (`src/lib/digest.ts`, `POST /resumo`, `PATCH /resumo`). The top 5 leads by `score` from the last 24 hours (news
 only) become a carousel with a cover and one card per story. With fewer than 3, no digest is produced and the button
 says so. The lead id derives from outlet and day, so a day never produces two digests. Each card shows its own source
 and today's date; a card that mixes two stories fails validation. The digest uses the outlet's default art, with no
@@ -70,16 +70,16 @@ illustration. Cron `0 21 * * *` (18:00 Brasília, fixed for all outlets).
 
 ## Production
 
-`POST /pautas/:id/produzir` starts a `ProducaoWorkflow` (instance `<piece>-r<round>`, `src/workflows/producao.ts`):
+`POST /pautas/:id/produzir` starts a `ProducaoWorkflow` (instance `<piece>-r<round>`, `src/workflows/production.ts`):
 
-1. **Draft** (`src/lib/redacao.ts`): the model writes the piece from the facts only. Idempotent per version.
-2. **Validate** (`src/lib/validacao.ts`): deterministic checks. A sentence without a fact, or a number, date or place
-   that is not in the source, fails. Up to 3 drafts per round (`MAX_TENTATIVAS`); the 2nd and 3rd exist only if
+1. **Draft** (`src/lib/drafting.ts`): the model writes the piece from the facts only. Idempotent per version.
+2. **Validate** (`src/lib/validation.ts`): deterministic checks. A sentence without a fact, or a number, date or place
+   that is not in the source, fails. Up to 3 drafts per round (`MAX_ATTEMPTS`); the 2nd and 3rd exist only if
    validation fails. Failure reasons are written in plain language, per card, in both UI languages.
 3. **Illustrate** and **render** the cards (see [Distribution](distribution.md)).
 4. The piece arrives in **To approve**.
 
-Piece, lead and document states change only through `transitar` in `src/kernel/estados.ts`: a transition table, a
+Piece, lead and document states change only through `transition` in `src/kernel/states.ts`: a transition table, a
 conditional `UPDATE`, an event and side effects in the same `DB.batch`.
 
 A light status endpoint (`GET /pecas/:id/status`, D1 only) is polled: every 2 s while producing, 15–30 s in review,
@@ -92,11 +92,11 @@ transition happens in one batch. The decision's author comes from the authentica
 request carries the expected `versao`; a stale version returns `409`.
 
 - **Rewrite** starts the next round of `ProducaoWorkflow`, with the editor's instruction. At most 3 rounds per piece
-  (`MAX_RODADAS`): the first plus up to two rewrites.
+  (`MAX_ROUNDS`): the first plus up to two rewrites.
 - **Other headlines** (`POST /pecas/:id/ganchos`): three alternative angles from the model; only those that pass
   `validar` are returned. Cost is added to `pecas.custo_usd`.
 - **Shorten to fit** (`POST /pecas/:id/ajuste`): per sentence, and on the title when a card fails with "doesn't fit".
-  Two shorter versions generated only from that sentence's fact; each is validated on a copy and against `LIMITES`, and
+  Two shorter versions generated only from that sentence's fact; each is validated on a copy and against `LIMITS`, and
   any that invents or does not shorten is dropped. Nothing is saved until "Save and check". Not offered for the
   call-to-action card, quotes, documents or sentences marked as the author's.
 - **Approve and go to the next**: on pieces from the outlet's site, with a clean check and a single account.
@@ -106,15 +106,15 @@ request carries the expected `versao`; a stale version returns `409`.
 | Approved with | Result |
 |---|---|
 | A `manual` account | The piece is approved; the operator posts from their phone and records the URL (`POST /pecas/:id/publicada {url}`). |
-| Any other account | `PublicacaoWorkflow` (instance `<piece>-pub-<n>`, `src/workflows/publicacao.ts`): waits until the scheduled time, publishes, records in `publicacoes`. |
+| Any other account | `PublicacaoWorkflow` (instance `<piece>-pub-<n>`, `src/workflows/publishing.ts`): waits until the scheduled time, publishes, records in `publicacoes`. |
 
-Account modes (`MODOS_CONTA`): `manual`, `real`, `intermediario`, `simulada`. Media under `/media/*` requires a session
+Account modes (`MODES_ACCOUNT`): `manual`, `real`, `intermediario`, `simulada`. Media under `/media/*` requires a session
 and outlet membership; a short-lived signed route is created at publish time only for the Instagram API to download the
 file.
 
 ### Autopilot
 
-On the **Sources** tab, "Autopilot" (admin only, off by default; `PATCH /piloto`, `src/lib/piloto.ts`). Without an
+On the **Sources** tab, "Autopilot" (admin only, off by default; `PATCH /piloto`, `src/lib/autopilot.ts`). Without an
 account that can post on its own the control is disabled and the screen says what is missing. After review, the
 `piloto` step approves a piece only if **all** of these hold:
 
@@ -124,13 +124,13 @@ account that can post on its own the control is disabled and the screen says wha
 - fewer than `piloto_por_dia` (default 6) approvals in the last 24 hours.
 
 Otherwise the piece stays in **To approve**, with the reason in the `peca.piloto_barrou` event. Posts are spaced by at
-least `INTERVALO_PILOTO_MIN` (60 minutes); the slot is reserved in `tenants.piloto_vez_em` with a single `UPDATE`, so
+least `INTERVAL_AUTOPILOT_MIN` (60 minutes); the slot is reserved in `tenants.piloto_vez_em` with a single `UPDATE`, so
 two pieces ready at once do not go out together. The decision is recorded with `por = 'piloto'` and who turned it on;
 **Posted** shows "Approved by autopilot".
 
 ## Plans and quotas
 
-Plans are configurable in `PLANOS` (`src/lib/planosTabela.ts`); the gate is `produzirPauta`. On a self-hosted install
+Plans are configurable in `PLANOS` (`src/lib/plansTable.ts`); the gate is `produceLead`. On a self-hosted install
 (`INSTALACAO_PROPRIA=1`, set in this repository's `wrangler.jsonc`) new outlets start on `cortesia`, with no limit and
 no billing.
 

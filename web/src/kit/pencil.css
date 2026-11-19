@@ -1,0 +1,23 @@
+/* Pencil strokes (Pencil.tsx). The CSS gives the box; the component measures and draws the stroke 1:1 inside it.
+   --lapis-dur and --lapis-atraso tune the drawing; the default is 300 ms, ease-out (the owner's request on 10/11; it was 700). */
+.lapis { display: block; overflow: visible; pointer-events: none; }
+.lapis path { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+
+/* Loop: covers the parent (which has position: relative), with slack for the stroke to go past the text. */
+.lapis-volta { position: absolute; inset: -2px -8px -2px -6px; width: calc(100% + 14px); height: calc(100% + 4px); }
+/* Underline: against the parent's bottom, its width. */
+.lapis-sublinhado { position: absolute; left: -2px; right: -2px; bottom: -7px; width: calc(100% + 4px); height: 10px; }
+/* The strike through a resolved note: the underline at the text's middle height. */
+.lapis-sublinhado.lapis-risco { top: calc(50% - 5px); bottom: auto; --lapis-dur: 300ms; }
+/* Check: icon size; the parent decides (width/height) when it needs to. */
+.lapis-visto { width: 22px; height: 20px; flex: none; }
+
+.lapis--desenhar path {
+  animation: lapis-desenha var(--lapis-dur, 300ms) cubic-bezier(.2, .8, .2, 1) var(--lapis-atraso, 0ms) both;
+}
+.lapis-visto.lapis--desenhar path { animation-duration: var(--lapis-dur, 300ms); }
+@keyframes lapis-desenha { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lapis--desenhar path { animation: none; }
+}

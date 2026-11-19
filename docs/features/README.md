@@ -1,13 +1,13 @@
 # Features
 
-Reference documentation for what Gazzpush does and how each part behaves. Code identifiers stay in Portuguese; the
-[glossary](../glossary.md) maps them to the English terms used here and in the English UI.
+Reference documentation for what Gazzpush does and how each part behaves. Table names, routes and stored values
+stay in Portuguese; the [glossary](../glossary.md) maps them to the English terms used here and in the English UI.
 
 ## Investigation
 
 | Page | What it covers |
 |---|---|
-| [Story desk](story-desk.md) | Writing a story against a dossier: claim-by-claim verification, reporting decisions, code-side checks (arithmetic, quotes, source strength), the blue-pencil reviewer, the writing desk, source material, the publication checklist and second opinion. |
+| [Story desk](story-desk.md) | Writing a story: the editor, source material beside the draft, the blue-pencil reviewer, the writing desk (interview quotes, second read, versions), and the checks behind the margin questions (claim by claim against the dossier, arithmetic, quotes, source strength), reporting decisions, the publication checklist and second opinion. |
 | [Documents and recordings](documents-and-recordings.md) | Asking questions of a PDF with verified citations, cross-checking totals, transcribing interviews and checking quotes against the recording, the in-app recorder. |
 | [Legal shield](legal-shield.md) | Right of reply, Wayback captures, text versions, the timestamped defense package and how to verify it without the app, the sheet for the lawyer, the public "How we reported this" page. |
 | [Living stories](living-stories.md) | Alerts after publication, update and correction posts, court-case tracking (DataJud) and FOI requests under Brazil's LAI. |

@@ -6,8 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The source code is in English: file and folder names, functions, variables, types, constants, comments, test
+  titles and internal error messages. Database tables and columns, routes, stored values, JSON keys, CSS classes and
+  the frozen card templates keep their Portuguese names (see the glossary).
+
+### Fixed
+
+- With the screens in English, approval conflicts ("3 rounds", an account no longer active) now show the specific
+  message instead of the generic one.
+
 ### Documentation
 
+- Gazzpush is presented as a writing assistant for investigative stories, with checking as one of its aids.
 - English README, documentation set under `docs/` (architecture, self-hosting, configuration, development,
   integrations, feature reference, glossary) and English design system in `DESIGN.md`.
 - Contributing guide, security policy, issue and pull request templates.

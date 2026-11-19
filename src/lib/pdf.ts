@@ -1,10 +1,10 @@
-// HTML → PDF no Browser Rendering (mockado nos testes por `navegador.abrir`). O HTML chega pronto, com as imagens
-// embutidas: nada sai para a rede.
+// HTML → PDF in Browser Rendering (mocked in tests through `navegador.abrir`). The HTML arrives complete, with images
+// embedded: nothing goes out to the network.
 import type { Env } from '../env';
-import { navegador, type AbrirNavegador } from './render';
+import { browserApi, type OpenBrowser } from './render';
 
-export async function gerarPdf(env: Env, html: string, abrir: AbrirNavegador = () => navegador.abrir(env)): Promise<Uint8Array<ArrayBuffer>> {
-  const browser = await abrir();
+export async function generatePdf(env: Env, html: string, launch: OpenBrowser = () => browserApi.abrir(env)): Promise<Uint8Array<ArrayBuffer>> {
+  const browser = await launch();
   try {
     const page = await browser.newPage({ viewport: { width: 794, height: 1123 }, deviceScaleFactor: 1 });
     await page.route(/^https?:\/\//, (route: any) => route.abort());

@@ -1,7 +1,7 @@
-// O Container do Reels (Cloudflare Containers): a imagem de container/reels/ (HyperFrames + Chrome sem tela + FFmpeg)
-// atrás de um Durable Object. O Worker chama `getContainer(env.REELS, pecaId).fetch(...)` (src/lib/reels.ts); a
-// instância sobe na primeira chamada e dorme 2 min depois da última. Sem internet: a composição chega inteira no
-// pedido (fontes, arte e logo em data URI; GSAP e música gravados ao lado pelo servidor do container).
+// The Reels Container (Cloudflare Containers): the container/reels/ image (HyperFrames + headless Chrome + FFmpeg)
+// behind a Durable Object. The Worker calls `getContainer(env.REELS, pecaId).fetch(...)` (src/lib/reels.ts); the
+// instance starts on the first call and sleeps 2 min after the last. No internet: the composition arrives whole in the
+// request (fonts, art and logo as data URIs; GSAP and music written alongside by the container's server).
 import { Container } from '@cloudflare/containers';
 import type { Env } from './env';
 

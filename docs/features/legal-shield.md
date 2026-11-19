@@ -3,7 +3,7 @@
 Investigative work gets challenged: by the people it names, by their lawyers, sometimes in court. The legal shield
 keeps the record that answers those challenges: that the other side was asked to respond and when, what each source
 said at the time it was used, which version of the text was published, and who approved it. Everything here is records
-and code; no model is involved. Logic lives in `src/lib/escudo.ts`; routes in `src/shell/textos.ts` (relative to
+and code; no model is involved. Logic lives in `src/lib/shield.ts`; routes in `src/shell/texts.ts` (relative to
 `/api/t/:tenantId/textos`). It is part of the [story desk](story-desk.md), so it is available to `autoral` outlets.
 
 ## Right of reply
@@ -12,7 +12,7 @@ and code; no model is involved. Logic lives in `src/lib/escudo.ts`; routes in `s
 request starts from a fixed template in the outlet's language, quoting the risky sentence you selected; the person
 can edit it. The sentence must be in the paragraph letter by letter (`422 trecho_fora`).
 
-The request goes out in one of two ways (`MEIOS_PEDIDO`):
+The request goes out in one of two ways (`MEANS_REQUEST`):
 
 | Method | How it works |
 |---|---|
@@ -28,7 +28,7 @@ keeps the reason on screen and offers the copy button. A deadline that passes wi
 A reply becomes evidence in the dossier (`evidencias.origem = 'resposta'`, primary source, no link, no Wayback
 capture, outside the daily source monitor). It arrives in one of two ways:
 
-- **By email**, through the Worker's `email` handler (`receberEmail`). An unknown token is rejected.
+- **By email**, through the Worker's `email` handler (`receiveEmail`). An unknown token is rejected.
 - **Pasted by hand**: `POST /:id/pedidos/:pedido/resposta`.
 
 If the paragraph that held the right of reply changes or is removed, the related accusations go back to "to be
@@ -43,13 +43,13 @@ Every link added to the dossier is queued for an Internet Archive capture (queue
 - **With `WAYBACK_ACCESS_KEY` and `WAYBACK_SECRET`** (S3-style keys from https://archive.org/account/s3.php), it uses
   the Save Page Now 2 API, with job status and higher limits.
 
-A slow capture goes back to the queue a minute later, up to the queue's last delivery (`TENTATIVAS_FILA`, 4). After
+A slow capture goes back to the queue a minute later, up to the queue's last delivery (`ATTEMPTS_QUEUE`, 4). After
 that, or if the queue rejected the message, the capture is marked failed with the reason and offers **Try again**
 (`POST /:id/evidencias/:evidencia/wayback`).
 
 ## Text versions
 
-A snapshot of the text (`texto_versoes`, `src/lib/versoes.ts`) is taken at each check, each sign-off, each send to
+A snapshot of the text (`texto_versoes`, `src/lib/versions.ts`) is taken at each check, each sign-off, each send to
 Instagram, each sources-page publication and each defense package.
 
 ## Defense package
@@ -71,7 +71,7 @@ Instagram, each sources-page publication and each defense package.
 | `LEIA-ME.txt` | Human-readable explanation and verification steps. |
 
 The zip is built in the Worker's memory (128 MB). Binary files (PDFs, audio, artwork, Wayback copies) share a budget of
-40 MB per package (`ORCAMENTO_PACOTE`). Anything that does not fit, or is missing from storage, is left out and listed
+40 MB per package (`BUDGET_PACKAGE`). Anything that does not fit, or is missing from storage, is left out and listed
 under `foraDoPacote` in the manifest (with the SHA-256 recorded at upload) and in `LEIA-ME.txt`; the screen reports how
 many through the `x-pacote-fora` header. If the timestamp authority is down, the package is still produced without the
 `.tsr`, and both `LEIA-ME.txt` and the screen say why. Each package is recorded in `pacotes_defesa`, and its timestamp is
@@ -79,7 +79,7 @@ also stored in R2 under `pacotes/`.
 
 ### Timestamps
 
-`src/lib/carimbo.ts` (PKI.js) requests an RFC 3161 timestamp from FreeTSA (`https://freetsa.org/tsr`, free, no key)
+`src/lib/timestamp.ts` (PKI.js) requests an RFC 3161 timestamp from FreeTSA (`https://freetsa.org/tsr`, free, no key)
 by default. Set `TSA_URL` to use another authority (for example `http://timestamp.digicert.com`); `TSA_RAIZ`, the
 authority's root certificate in base64 DER, is then **required**: without a trusted root the app does not timestamp.
 The FreeTSA root ships in the code.
@@ -119,7 +119,7 @@ unsourced or risky sentences, check explanations, right-of-reply requests and an
 Publishing again takes the previous page down; the address is random.
 
 **Final card.** With the page live, "Send to Instagram" can replace the standard call-to-action card with a card that
-links to the sources page, and the caption closes with it (`escolherCta`, `pautas.fontes_url`).
+links to the sources page, and the caption closes with it (`chooseCta`, `pautas.fontes_url`).
 
 ## Configuration
 

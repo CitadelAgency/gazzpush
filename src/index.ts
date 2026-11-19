@@ -1,35 +1,35 @@
-import { ErroMesa } from './lib/mesa';
-import { paginaDoVeiculo } from './lib/paginaVeiculo';
-import { assinaturaValida, processarEvento } from './lib/stripe';
+import { DeskError } from './lib/desk';
+import { fromOutletPage } from './lib/outletPage';
+import { validSignature, processEvent } from './lib/stripe';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { Env, MonitorMessage } from './env';
 import { scheduled } from './monitor/scheduled';
 import { queue } from './monitor/consumer';
-import { verificarMedia } from './lib/crypto';
-import { SemConta } from './lib/publicar';
-import { TransicaoInvalida } from './kernel/estados';
-import { criarAuth } from './shell/auth';
+import { verifyMedia } from './lib/crypto';
+import { WithoutAccount } from './lib/publish';
+import { InvalidTransition } from './kernel/states';
+import { createAuth } from './shell/auth';
 import { api } from './shell/api';
-import { exigirMesmaOrigem, exigirSessao, type AppEnv } from './shell/tenancy';
-import { idiomaDe, t } from './shell/idioma';
-import { paginaPublica, receberEmail } from './lib/escudo';
-import { CABECALHOS_ANUNCIO, decidirAnuncio, paginaAnuncio } from './lib/anuncio';
-import { entrarNaLista, lerCadastro } from './lib/listaEspera';
-import { instalacaoPropria } from './lib/planos';
+import { requireSameOrigin, requireSession, type AppEnv } from './shell/tenancy';
+import { language, t } from './shell/language';
+import { publicPage, receiveEmail } from './lib/shield';
+import { HEADERS_AD, decideAd, adPage } from './lib/ad';
+import { signInInList, readSignup } from './lib/waitlist';
+import { selfHosted } from './lib/plans';
 
-export { ProducaoWorkflow } from './workflows/producao';
-export { PublicacaoWorkflow } from './workflows/publicacao';
+export { ProducaoWorkflow } from './workflows/production';
+export { PublicacaoWorkflow } from './workflows/publishing';
 export { ReelsContainer } from './reelsContainer';
 
 const app = new Hono<AppEnv>();
 
 app.get('/health', (c) => c.json({ ok: true }));
 
-// Better Auth: cadastro, login (e-mail/senha, Google), sessão, logout. Instância por request (D1 é do request).
-app.on(['GET', 'POST'], '/api/auth/*', (c) => criarAuth(c.env).handler(c.req.raw));
+// Better Auth: sign-up, sign-in (email/password, Google), session, sign-out. One instance per request (D1 belongs to the request).
+app.on(['GET', 'POST'], '/api/auth/*', (c) => createAuth(c.env).handler(c.req.raw));
 
-// Convite de equipe, lido sem sessão pela tela de criar conta (o id é aleatório; só diz e-mail, papel e veículo).
+// Team invite, read without a session by the sign-up screen (the id is random; it only reveals email, role and outlet).
 app.get('/api/convites/:id', async (c) => {
   const row = await c.env.DB.prepare(
     'SELECT c.email, c.papel, c.aceito_em, t.nome AS veiculo, t.slug FROM convites c JOIN tenants t ON t.id = c.tenant_id WHERE c.id = ?',
@@ -38,87 +38,87 @@ app.get('/api/convites/:id', async (c) => {
   return c.json({ email: row.email, papel: row.papel, veiculo: row.veiculo, slug: row.slug, aceito: row.aceito_em !== null });
 });
 
-// Página de fontes pública ("Como apuramos"): sem sessão, só o retrato congelado que o editor publicou.
-// Webhook da Stripe: sem sessão, e a prova é a assinatura sobre o corpo cru. Antes do middleware de /api/*.
+// Public sources page ("How we reported this"): no session, only the frozen snapshot the editor published.
+// Stripe webhook: no session, and the proof is the signature over the raw body. Before the /api/* middleware.
 app.post('/stripe/webhook', async (c) => {
-  const segredo = c.env.STRIPE_WEBHOOK_SECRET;
-  if (!segredo) return c.json({ erro: 'cobrança não configurada' }, 404);
-  const corpo = await c.req.text();
-  if (!(await assinaturaValida(segredo, corpo, c.req.header('stripe-signature')))) return c.json({ erro: 'assinatura inválida' }, 400);
-  return c.json({ recebido: await processarEvento(c.env, JSON.parse(corpo)) });
+  const secret = c.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) return c.json({ erro: 'cobrança não configurada' }, 404);
+  const body = await c.req.text();
+  if (!(await validSignature(secret, body, c.req.header('stripe-signature')))) return c.json({ erro: 'assinatura inválida' }, 400);
+  return c.json({ recebido: await processEvent(c.env, JSON.parse(body)) });
 });
 
 app.get('/fontes/:id', async (c) => {
-  const html = await paginaPublica(c.env, c.req.param('id'));
+  const html = await publicPage(c.env, c.req.param('id'));
   if (!html) return c.html('<!DOCTYPE html><html lang="pt-BR"><meta charset="utf-8"><title>Página não encontrada</title><p>Esta página de fontes não existe ou saiu do ar.</p></html>', 404);
   return c.html(html, 200, { 'cache-control': 'public, max-age=300' });
 });
 
-// Página pública do veículo: desligada por padrão. Desligada ou inexistente dá a mesma resposta.
+// The outlet's public page: off by default. Off or nonexistent gives the same response.
 app.get('/v/:slug', async (c) => {
-  const html = await paginaDoVeiculo(c.env, c.req.param('slug'), Number(c.req.query('p') ?? 1));
+  const html = await fromOutletPage(c.env, c.req.param('slug'), Number(c.req.query('p') ?? 1));
   if (!html) return c.html('<!DOCTYPE html><html lang="pt-BR"><meta charset="utf-8"><title>Página não encontrada</title><p>Esta página não existe ou saiu do ar.</p></html>', 404);
   return c.html(html, 200, { 'cache-control': 'no-cache' });
 });
 
-// Aprovação do anunciante: sem sessão, com o token do link. O GET nunca decide (o WhatsApp abre o link para a prévia).
+// Advertiser approval: no session, with the link's token. The GET never decides (WhatsApp opens the link for the preview).
 app.get('/anuncio/:token', async (c) => {
-  const r = await paginaAnuncio(c.env, c.req.param('token'));
-  return c.html(r.html, r.status, CABECALHOS_ANUNCIO);
+  const r = await adPage(c.env, c.req.param('token'));
+  return c.html(r.html, r.status, HEADERS_AD);
 });
 app.post('/anuncio/:token', async (c) => {
   const form = await c.req.parseBody().catch(() => ({} as Record<string, unknown>));
-  const r = await decidirAnuncio(c.env, c.req.param('token'), form.decisao, form.comentario);
-  return c.html(r.html, r.status, CABECALHOS_ANUNCIO);
+  const r = await decideAd(c.env, c.req.param('token'), form.decisao, form.comentario);
+  return c.html(r.html, r.status, HEADERS_AD);
 });
 
-// Instalação própria: a "/" sem sessão vai a /entrar, e não à lista de espera (web/src/telas/Inicio.tsx). Pública, antes da sessão.
-app.get('/api/instalacao', (c) => c.json({ propria: instalacaoPropria(c.env) }));
+// Self-hosted install: "/" without a session goes to /entrar, not to the waitlist (web/src/screens/Home.tsx). Public, before the session.
+app.get('/api/instalacao', (c) => c.json({ propria: selfHosted(c.env) }));
 
-// Lista de espera: pública, antes da sessão. O campo `site` é isca: robô que preenche recebe a resposta de sempre.
-app.post('/api/lista-espera', exigirMesmaOrigem, async (c) => {
-  const corpo = await c.req.json<{ site?: unknown }>().catch(() => null);
-  if (corpo?.site) return c.json({ ok: true });
-  const cadastro = lerCadastro(corpo);
-  if (!cadastro) return c.json({ erro: t(c, 'Confira o e-mail: ele parece incompleto.', 'Check the email: it looks incomplete.') }, 400);
-  const entrou = await entrarNaLista(c.env, cadastro, idiomaDe(c), c.req.header('cf-connecting-ip') ?? '');
-  if (!entrou) return c.json({ erro: t(c, 'Muitos cadastros seguidos desta conexão. Tente de novo em uma hora.', 'Too many sign-ups in a row from this connection. Try again in an hour.') }, 429);
+// Waitlist: public, before the session. The `site` field is a honeypot: a bot that fills it gets the usual response.
+app.post('/api/lista-espera', requireSameOrigin, async (c) => {
+  const body = await c.req.json<{ site?: unknown }>().catch(() => null);
+  if (body?.site) return c.json({ ok: true });
+  const signup = readSignup(body);
+  if (!signup) return c.json({ erro: t(c, 'Confira o e-mail: ele parece incompleto.', 'Check the email: it looks incomplete.') }, 400);
+  const entered = await signInInList(c.env, signup, language(c), c.req.header('cf-connecting-ip') ?? '');
+  if (!entered) return c.json({ erro: t(c, 'Muitos cadastros seguidos desta conexão. Tente de novo em uma hora.', 'Too many sign-ups in a row from this connection. Try again in an hour.') }, 429);
   return c.json({ ok: true });
 });
 
-// Resto da API: mesma origem em mutação + sessão obrigatória. Tenancy fica nas rotas /api/t/:tenantId/*.
-app.use('/api/*', exigirMesmaOrigem, exigirSessao);
+// Rest of the API: same origin on mutations + required session. Tenancy lives in the /api/t/:tenantId/* routes.
+app.use('/api/*', requireSameOrigin, requireSession);
 app.route('/api', api);
 
-// Arte no R2. Só com URL assinada (assinarMedia): Instagram baixa daqui ao criar o container; o painel usa a mesma coisa.
+// Art in R2. Only with a signed URL (signMedia): Instagram downloads from here when creating the container; the dashboard uses the same.
 app.get('/media/*', async (c) => {
   const key = decodeURIComponent(c.req.path.replace(/^\/media\//, ''));
-  if (!(await verificarMedia(c.env, key, c.req.query('exp'), c.req.query('sig')))) return c.json({ erro: t(c, 'assinatura inválida ou expirada', 'invalid or expired signature') }, 403);
-  // Range (o player de vídeo pede pedaços para pular no tempo): 206 com Content-Range.
-  const pedido = c.req.header('range');
-  const obj = await c.env.MEDIA.get(key, pedido ? { range: c.req.raw.headers } : undefined).catch(() => undefined);
+  if (!(await verifyMedia(c.env, key, c.req.query('exp'), c.req.query('sig')))) return c.json({ erro: t(c, 'assinatura inválida ou expirada', 'invalid or expired signature') }, 403);
+  // Range (the video player requests chunks to seek): 206 with Content-Range.
+  const request = c.req.header('range');
+  const obj = await c.env.MEDIA.get(key, request ? { range: c.req.raw.headers } : undefined).catch(() => undefined);
   if (obj === undefined) return new Response(null, { status: 416, headers: { 'accept-ranges': 'bytes' } });
   if (!obj) return c.notFound();
   const headers: Record<string, string> = {
     'content-type': obj.httpMetadata?.contentType ?? 'application/octet-stream', 'cache-control': 'private, max-age=3600', 'accept-ranges': 'bytes',
   };
-  const faixa = obj.range as { offset?: number; length?: number } | undefined;
-  if (pedido && faixa && faixa.offset !== undefined && faixa.length !== undefined) {
-    headers['content-range'] = `bytes ${faixa.offset}-${faixa.offset + faixa.length - 1}/${obj.size}`;
-    headers['content-length'] = String(faixa.length);
+  const band = obj.range as { offset?: number; length?: number } | undefined;
+  if (request && band && band.offset !== undefined && band.length !== undefined) {
+    headers['content-range'] = `bytes ${band.offset}-${band.offset + band.length - 1}/${obj.size}`;
+    headers['content-length'] = String(band.length);
     return new Response(obj.body, { status: 206, headers });
   }
   return new Response(obj.body, { headers });
 });
 
 app.onError((e, c) => {
-  if (e instanceof ErroMesa && e.status === 402) return c.json({ erro: t(c, e.message, e.en ?? e.message), code: e.codigo }, 402);
-  if (e instanceof TransicaoInvalida) return c.json({ erro: e.de === null ? t(c, 'não encontrado', 'not found') : t(c, e.message, e.en) }, e.de === null ? 404 : 409);
-  if (e instanceof SemConta) return c.json({ erro: t(c, e.message, e.en ?? e.message) }, 409);
+  if (e instanceof DeskError && e.status === 402) return c.json({ erro: t(c, e.message, e.en ?? e.message), code: e.codigo }, 402);
+  if (e instanceof InvalidTransition) return c.json({ erro: e.de === null ? t(c, 'não encontrado', 'not found') : t(c, e.message, e.en) }, e.de === null ? 404 : 409);
+  if (e instanceof WithoutAccount) return c.json({ erro: t(c, e.message, e.en ?? e.message) }, 409);
   if (e instanceof HTTPException) return e.getResponse();
   console.error(e);
   return c.json({ erro: t(c, 'erro interno', 'internal error') }, 500);
 });
 
-// E-mail que chega (Email Routing): a resposta a um pedido de outro lado (outro-lado+token@…) entra no dossiê.
-export default { fetch: app.fetch, scheduled, queue, email: receberEmail } satisfies ExportedHandler<Env, MonitorMessage>;
+// Incoming email (Email Routing): the reply to an other-side request (outro-lado+token@…) enters the dossier.
+export default { fetch: app.fetch, scheduled, queue, email: receiveEmail } satisfies ExportedHandler<Env, MonitorMessage>;

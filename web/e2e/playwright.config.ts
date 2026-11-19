@@ -1,16 +1,12 @@
 import { defineConfig } from "@playwright/test";
-import { ORIGEM_E2E } from "./origem";
+import { ORIGIN_E2_AND } from "./origin";
 
+// E2E against `wrangler dev` (localhost:8787, or `E2E_ORIGEM`) with the seeded local D1 (README "Local testing"). Start
+// it first: `npm run web:build && npm run dev`. Screenshots in design/telas/fase-c/.
 export default defineConfig({
   testDir: ".",
   timeout: 60_000,
   workers: 1,
-  reporter: "list",
-  webServer: process.env.E2E_ORIGEM ? undefined : {
-    command: "npm run web:build && npm exec -- vite preview web --host 127.0.0.1 --port 4187 --strictPort",
-    cwd: "../..",
-    url: ORIGEM_E2E,
-    reuseExistingServer: false,
-  },
-  use: { baseURL: ORIGEM_E2E, channel: "chromium", locale: "pt-BR", timezoneId: "America/Sao_Paulo" },
+  reporter: [["list"]],
+  use: { baseURL: ORIGIN_E2_AND, channel: "chromium", locale: "pt-BR", timezoneId: "America/Sao_Paulo" },
 });

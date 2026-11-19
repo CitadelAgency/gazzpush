@@ -1,69 +1,69 @@
 import type { Env } from '../env';
-import { entradaModelo, type Artigo } from './artigo';
-import { registrarEvento } from './db';
+import { inputModel, type Article } from './article';
+import { recordEvent } from './db';
 
 /**
- * Dedupe semântico (complementa o hash exato): a mesma notícia reescrita por outro site não vira duas ideias.
- * Embedding bge-m3 (1024 dims, igual ao índice `redacao-dedupe`), namespace = tenant. Só descarta quando o vizinho
- * mais parecido (cosseno ≥ 0,92) é um documento triado ou com ideia viva, dos últimos 3 dias, do mesmo veículo.
- * Qualquer falha do AI ou do Vectorize vira evento `dedupe.falha` e a triagem segue sem esta etapa.
+ * Semantic dedupe (complements the exact hash): the same news rewritten by another site does not become two ideas.
+ * bge-m3 embedding (1024 dims, matching the `redacao-dedupe` index), namespace = tenant. It only discards when the
+ * closest neighbour (cosine ≥ 0.92) is a document that was triaged or has a live idea, from the last 3 days, in the same
+ * outlet. Any AI or Vectorize failure becomes a `dedupe.falha` event and triage carries on without this step.
  */
-export const LIMIAR_SEMANTICO = 0.92;
-export const JANELA_DIAS = 3;
+export const THRESHOLD_SEMANTIC = 0.92;
+export const DAYS_WINDOW = 3;
 export const MAX_CHARS_EMBED = 8000;
-const MODELO_EMBED = '@cf/baai/bge-m3';
-const DIMENSOES = 1024;
+const EMBED_MODEL = '@cf/baai/bge-m3';
+const DIMENSIONS = 1024;
 
-async function embutirReal(env: Env, texto: string): Promise<number[]> {
-  const out = await (env.AI.run as (m: string, i: unknown) => Promise<{ data?: number[][] }>)(MODELO_EMBED, { text: [texto] });
+async function embedReal(env: Env, text: string): Promise<number[]> {
+  const out = await (env.AI.run as (m: string, i: unknown) => Promise<{ data?: number[][] }>)(EMBED_MODEL, { text: [text] });
   const v = out?.data?.[0];
-  if (!Array.isArray(v) || v.length !== DIMENSOES) throw new Error(`embedding inválido (${Array.isArray(v) ? v.length : typeof v})`);
+  if (!Array.isArray(v) || v.length !== DIMENSIONS) throw new Error(`invalid embedding (${Array.isArray(v) ? v.length : typeof v})`);
   return v;
 }
 
-export type IndiceDedupe = Pick<VectorizeIndex, 'query' | 'upsert'>;
+export type DedupeIndex = Pick<VectorizeIndex, 'query' | 'upsert'>;
 
-/** Injetáveis: AI e Vectorize não existem no vitest (os testes trocam por fakes em memória). */
+/** Injectable: AI and Vectorize do not exist in vitest (tests swap them for in-memory fakes). */
 export const dedupe = {
-  embutir: embutirReal,
-  indice: (env: Env): IndiceDedupe => env.DEDUPE,
+  embutir: embedReal,
+  indice: (env: Env): DedupeIndex => env.DEDUPE,
 };
 
-export type ResultadoDedupe = { duplicadoDe: string; score: number } | null;
+export type ResultDedupe = { duplicadoDe: string; score: number } | null;
 
 /**
- * Procura um documento quase igual; se não há, grava o vetor deste (id = documentoId). Devolve o duplicado ou null.
- * Nunca lança: falha vira `dedupe.falha` e null.
+ * Looks for a near-identical document; if there is none, stores this one's vector (id = documentoId). Returns the
+ * duplicate or null. Never throws: a failure becomes `dedupe.falha` and null.
  */
-export async function dedupeSemantico(env: Env, tenantId: string, documentoId: string, artigo: Pick<Artigo, 'titulo' | 'texto'>, agora = new Date()): Promise<ResultadoDedupe> {
+export async function dedupeSemantic(env: Env, tenantId: string, documentId: string, article: Pick<Article, 'titulo' | 'texto'>, now = new Date()): Promise<ResultDedupe> {
   try {
-    const vetor = await dedupe.embutir(env, entradaModelo(artigo).slice(0, MAX_CHARS_EMBED));
-    const indice = dedupe.indice(env);
-    const { matches } = await indice.query(vetor, { topK: 3, namespace: tenantId, returnMetadata: 'all' });
-    const candidatos = matches
-      .filter((m) => m.id !== documentoId && m.score >= LIMIAR_SEMANTICO)
+    const vector = await dedupe.embutir(env, inputModel(article).slice(0, MAX_CHARS_EMBED));
+    const index = dedupe.indice(env);
+    const { matches } = await index.query(vector, { topK: 3, namespace: tenantId, returnMetadata: 'all' });
+    const candidates = matches
+      .filter((m) => m.id !== documentId && m.score >= THRESHOLD_SEMANTIC)
       .sort((a, b) => b.score - a.score);
-    for (const m of candidatos) {
-      const outro = typeof m.metadata?.documentoId === 'string' ? m.metadata.documentoId : m.id;
-      // O estado vem do D1 (o metadado do vetor envelhece): triado ou com ideia viva, nos últimos 3 dias, deste veículo.
-      const vivo = await env.DB.prepare(
+    for (const m of candidates) {
+      const other = typeof m.metadata?.documentoId === 'string' ? m.metadata.documentoId : m.id;
+      // The state comes from D1 (vector metadata goes stale): triaged or with a live idea, in the last 3 days, in this outlet.
+      const live = await env.DB.prepare(
         `SELECT 1 AS ok FROM documentos d
           WHERE d.id = ? AND d.tenant_id = ? AND d.id != ?
-            AND ((d.status = 'triado' AND d.capturado_em >= datetime(?, '-${JANELA_DIAS} days'))
+            AND ((d.status = 'triado' AND d.capturado_em >= datetime(?, '-${DAYS_WINDOW} days'))
               OR EXISTS (SELECT 1 FROM pautas p JOIN json_each(p.documento_ids_json) j ON j.value = d.id
-                          WHERE p.tenant_id = d.tenant_id AND p.status != 'descartada' AND p.created_at >= datetime(?, '-${JANELA_DIAS} days')))`,
-      ).bind(outro, tenantId, documentoId, sqlDe(agora), sqlDe(agora)).first();
-      if (vivo) return { duplicadoDe: outro, score: m.score };
+                          WHERE p.tenant_id = d.tenant_id AND p.status != 'descartada' AND p.created_at >= datetime(?, '-${DAYS_WINDOW} days')))`,
+      ).bind(other, tenantId, documentId, sqlOf(now), sqlOf(now)).first();
+      if (live) return { duplicadoDe: other, score: m.score };
     }
-    await indice.upsert([{ id: documentoId, values: vetor, namespace: tenantId, metadata: { tenantId, documentoId, criadoEm: agora.toISOString() } }]);
+    await index.upsert([{ id: documentId, values: vector, namespace: tenantId, metadata: { tenantId, documentoId: documentId, criadoEm: now.toISOString() } }]);
     return null;
   } catch (e) {
-    await registrarEvento(env, tenantId, 'dedupe.falha', 'documento', documentoId, { erro: String(e).slice(0, 300) }).catch(() => {});
+    await recordEvent(env, tenantId, 'dedupe.falha', 'documento', documentId, { erro: String(e).slice(0, 300) }).catch(() => {});
     return null;
   }
 }
 
-const sqlDe = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+const sqlOf = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
 
-/** "0,93": a similaridade no motivo do descarte, com vírgula. */
-export const similaridade = (score: number) => (Math.floor(score * 100) / 100).toFixed(2).replace('.', ',');
+/** "0,93": the similarity in the discard reason, with a decimal comma. */
+export const similarity = (score: number) => (Math.floor(score * 100) / 100).toFixed(2).replace('.', ',');

@@ -71,21 +71,24 @@ screen at desktop and mobile widths: layout overflow and WCAG 2.1 AA with axe. S
 
 ## Code conventions
 
-- **Language of the code.** Identifiers, tables and routes use the Portuguese newsroom vocabulary of the project. Keep
-  new code consistent with its surroundings and look terms up in the [glossary](glossary.md). Docs, issues, pull
-  requests and commit messages are in English.
+- **Language of the code.** Functions, variables and comments are in English. Database tables, routes, stored values and
+  the other contract names listed in [CONTRIBUTING](../CONTRIBUTING.md#code-style) keep their Portuguese names; look
+  terms up in the [glossary](glossary.md). Docs, issues, pull requests and commit messages are in English.
+- **Frozen card templates.** `src/templates/card.html` and `src/templates/cta.html` stay in Portuguese, comments
+  included. `test/legacy-hash.test.ts` pins the hash of the HTML they render, so an edit would change the art of
+  existing pieces. Do not edit them.
 - **Every UI string in both languages**, written in place: `t("Aprovar", "Approve")` in the web app
-  (`web/src/idioma.ts`) and `t(c, "Não encontrado.", "Not found.")` in the Worker (`src/shell/idioma.ts`). Never call
+  (`web/src/language.ts`) and `t(c, "Não encontrado.", "Not found.")` in the Worker (`src/shell/language.ts`). Never call
   `t()` at module top level: switching languages remounts screens, and a constant evaluated at import time would stay
   in the old language. Use a function or a getter.
-- **Status changes only through `transitar`** in `src/kernel/estados.ts`.
+- **Status changes only through `transition`** in `src/kernel/states.ts`.
 - **No writes outside `step.do`** in Workflows, and every step idempotent.
 - **Domain logic as pure functions** in `src/lib/`, tested directly. The HTTP layer in `src/shell/` stays thin.
 - **Never fail silently.** A failed model call, fetch or job becomes a visible state with a reason.
 - **Model output is never trusted.** Verify citations, passages and numbers in code before showing them.
 - **Two TypeScript configs**: the Worker builds without DOM types, the web app with them.
 - **Migrations are additive.** Add a new numbered file in `migrations/`; never edit one that has shipped.
-- **Design changes go through [DESIGN.md](../DESIGN.md)** and the tokens in `web/src/estilo/tokens.css`.
+- **Design changes go through [DESIGN.md](../DESIGN.md)** and the tokens in `web/src/styles/tokens.css`.
 
 ## Windows notes
 

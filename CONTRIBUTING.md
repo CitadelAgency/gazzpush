@@ -46,15 +46,17 @@ lawyer's reading.
    Nothing is inserted silently.
 3. **Every decision is recorded** with who made it and when, and the actor always comes from the session.
 4. **Never fail silently.** Outages, refusals and invalid answers become visible states with a reason.
-5. **Small and auditable.** One Worker, pure functions in `src/lib/`, status changes only through `transitar`, no
+5. **Small and auditable.** One Worker, pure functions in `src/lib/`, status changes only through `transition`, no
    speculative abstractions.
 
 ## Code style
 
 - TypeScript in strict mode. Match the style of the file you are editing.
-- Identifiers use the project's Portuguese domain vocabulary. Keep new names consistent and check the
-  [glossary](docs/glossary.md). Comments may be in English or Portuguese. Docs, issues, pull requests and commit
-  messages are in English.
+- New identifiers, file names and comments are in English. Keep the Portuguese names of the stable contracts: database
+  tables and columns, object properties and JSON keys (API payloads included), React component props, HTTP routes,
+  stored status and enum values, queue message types, R2 and KV key prefixes, API error codes, Workflow and Container
+  class names and bindings, CSS token and class names, and migration file names. Check the
+  [glossary](docs/glossary.md) for those terms. Docs, issues, pull requests and commit messages are in English.
 - Keep pull requests focused: one concern per pull request, with no unrelated formatting changes.
 
 ## Commit messages

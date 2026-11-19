@@ -1,0 +1,369 @@
+/* Round 4 (DESIGN.md §12): the sheet on the desk, the folio and the screens' new pieces. The usual vocabulary (proof,
+   ruler, crop, stamp, stage, strip) stays in tokens.css and proof.css; only what this round brought goes here.
+   Reference prototype: design/rodada-4/ (estilo.css has the same classes, with the token names without the prefix). */
+
+/* ── A casca: a mesa, a folha e a moldura ─────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* On desktop the screen is a sheet of paper on the desk. The page still scrolls whole (no inner scrolling): the shape
+     comes from the frame, a fixed, hollow rectangle that paints the desk outside the sheet and draws the paper's edge
+     and shadow. The folio and anything else pinned at the top adds to --topo; whatever pins at the bottom adds to --pe. */
+  .moldura { display: none; }
+  @media (min-width: 1024px) {
+    [data-casca] { --topo: 52px; --pe: 8px; background-color: var(--color-mesa); }
+    /* The page background is also desk: it is what shows behind the scrollbar (the frame, being fixed, does not reach there). */
+    html:has([data-casca]) body { background-color: var(--color-mesa); }
+    .folha-mesa { min-height: 100dvh; background-color: var(--color-papel); background-image: var(--textura-papel); background-size: 32px 32px, 32px 32px, 220px 220px; }
+    .moldura {
+      position: fixed; inset: 8px 8px 8px 256px; z-index: 20; display: block; border-radius: 10px; pointer-events: none; view-transition-name: moldura;
+      box-shadow: inset 0 0 0 1px rgb(21 23 27 / .07), 0 1px 2px rgb(21 23 27 / .05), 0 12px 28px -18px rgb(21 23 27 / .28), 0 0 0 100vmax var(--color-mesa);
+    }
+  }
+
+  /* Editor focus and Material alongside (html[data-sem-lateral]): the sidebar goes away and the sheet takes the whole desk. */
+  @media (min-width: 1024px) { html[data-sem-lateral] .moldura { left: 8px; } html[data-sem-lateral] .folha-mesa { padding-left: 8px; } }
+
+  /* Folio: the line at the top of the page, as in a newspaper. On the left, where I am (the screen's name appears when the
+     title scrolls out; a post's screen puts the way back there); on the right, what is happening, the date and the place.
+     On mobile it only exists when the screen has a way back. */
+  .folio {
+    position: sticky; top: 58px; z-index: 10; display: none; align-items: center; justify-content: space-between; gap: 16px; height: 40px; padding: 0 16px;
+    background: var(--color-papel); color: var(--color-apoio); border-bottom: 1px solid var(--color-fio); view-transition-name: folio;
+  }
+  .folio:has(.folio-trilha :is(a, button)) { display: flex; }
+  @media (min-width: 1024px) {
+    .folio { display: flex; top: 8px; height: 44px; padding: 0 20px 0 28px; border-radius: 10px 10px 0 0; background: transparent; border-bottom-color: transparent; transition: border-color 160ms, background-color 160ms; }
+    .folio[data-rolou] { background: var(--color-papel); border-bottom-color: var(--color-fio); }
+  }
+  .folio-trilha { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13.5px; }
+  .folio-trilha :is(a, button) { display: inline-flex; align-items: center; gap: 4px; flex: none; min-height: 30px; margin-left: -6px; padding: 0 6px; border-radius: var(--radius-faixa); color: inherit; font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer; }
+  @media (hover: hover) { .folio-trilha :is(a, button):hover { background: var(--color-papel-2); color: var(--color-texto-forte); } }
+  .folio-trilha b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--color-texto-forte); }
+  .folio-trilha .mono { flex: none; white-space: nowrap; }
+  .folio-trilha .sep { opacity: .55; }
+  .folio-titulo { opacity: 0; transform: translateY(4px); transition: opacity 160ms, transform 200ms var(--ease-saida); }
+  .folio[data-rolou] .folio-titulo { opacity: 1; transform: none; }
+  .folio-trilha:has(> :not(.folio-titulo)) > .folio-titulo { display: none; }
+  .folio-dir { display: flex; align-items: center; gap: 14px; flex: none; white-space: nowrap; }
+  .folio-dir:has(#folio-dir > *) > .folio-padrao { display: none; }
+  .folio-padrao { display: none; align-items: center; gap: 14px; }
+  @media (min-width: 1024px) { .folio-padrao { display: flex; } }
+  .folio-estado { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 8px; border-radius: var(--radius-faixa); color: var(--color-texto); text-decoration: none; }
+  @media (hover: hover) { a.folio-estado:hover { background: var(--color-papel-2); } }
+  .folio-estado[data-tom="aviso"] { color: var(--color-ambar); }
+  @media (max-width: 1023px) { .folio .so-largo { display: none; } }
+
+  /* A sidebar row: 34 px, an 18 px icon. The open one gets tinta-clara and the margin mark; pressed, it darkens a tone. */
+  .lat-item {
+    position: relative; display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 0 8px 0 10px; border-radius: var(--radius-faixa);
+    color: var(--color-texto); font-size: 14.5px; font-weight: 500; text-decoration: none;
+  }
+  .lat-item > svg { width: 18px; height: 18px; flex: none; color: var(--color-apoio); }
+  @media (hover: hover) { .lat-item:hover { background: var(--color-papel-3); color: var(--color-texto-forte); } }
+  .lat-item:active { background: var(--color-aperto); }
+  .lat-item.lat-ativa { background: var(--color-tinta-clara); color: var(--color-tinta); font-weight: 700; }
+  .lat-item.lat-ativa > svg { color: var(--color-tinta); }
+  .lat-rotulo { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-apoio); }
+
+  /* Registration mark: this desk's "working" sign, in place of an ordinary spinner. */
+  .registro { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.4; animation: gira 1.2s linear infinite; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+  /* The four production steps: finished ones in graphite, the current one with a running stroke. */
+  .etapas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
+  .etapas > i { display: block; height: 3px; border-radius: 2px; background: var(--color-fio-forte); overflow: hidden; }
+  .etapas > i[data-feita] { background: var(--color-texto-forte); }
+  .etapas > i[data-agora]::after { content: ""; display: block; width: 40%; height: 100%; background: var(--color-texto-forte); animation: corre 1.1s linear infinite; }
+  @keyframes corre { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
+  @media (prefers-reduced-motion: reduce) {
+    .registro, .etapas > i[data-agora]::after { animation: none; }
+    .etapas > i[data-agora]::after { width: 100%; opacity: .45; }
+  }
+}
+
+/* ── Small pieces ─────────────────────────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* A secondary action button in tinta-clara (Produce, Ask for version 2) and a white paper button (the stage's actions). */
+  .btn-clara, .btn-papel, .btn-tom {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--radius-btn);
+    font-weight: 700; cursor: pointer; white-space: nowrap; transition: background-color 120ms, box-shadow 140ms, scale 140ms var(--ease-saida);
+  }
+  .btn-clara { background: var(--color-tinta-clara); color: var(--color-tinta); }
+  .btn-papel { background: var(--color-branco); color: var(--color-texto-forte); box-shadow: var(--shadow-curta); }
+  .btn-tom { background: var(--color-papel-2); color: var(--color-texto-forte); }
+  @media (hover: hover) {
+    .btn-clara:hover { background: color-mix(in srgb, var(--color-tinta-clara) 82%, var(--color-tinta)); }
+    .btn-papel:hover { box-shadow: var(--shadow-eleva); }
+    .btn-tom:hover { background: var(--color-papel-3); }
+  }
+  :is(.btn-clara, .btn-papel, .btn-tom):disabled { opacity: .55; cursor: not-allowed; }
+  @media (min-width: 1024px) { .btn-p { min-height: 36px; padding: 0 13px; font-size: 14px; font-weight: 600; } }
+  .btn-clara .kbd { background: transparent; color: var(--color-tinta); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-tinta) 40%, transparent); }
+  .btn-tinta .kbd { background: color-mix(in srgb, var(--color-sobre-tinta) 16%, transparent); color: var(--color-sobre-tinta); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-sobre-tinta) 30%, transparent); }
+
+  /* Counter of what waits for you (in the sidebar and wherever else it fits). */
+  .selo { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 6px; background: var(--color-tinta); color: var(--color-sobre-tinta); font: 400 11px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+  /* Filter chip: the chosen one in graphite. */
+  .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 999px; color: var(--color-texto); font-size: 14px; font-weight: 500; box-shadow: inset 0 0 0 1px var(--color-fio-forte); cursor: pointer; transition: background-color 120ms, scale 140ms var(--ease-saida); }
+  @media (min-width: 1024px) { .chip { min-height: 30px; padding: 0 11px; font-size: 13.5px; } }
+  @media (hover: hover) { .chip:hover { background: var(--color-papel-2); } }
+  .chip[aria-pressed="true"] { background: var(--color-texto-forte); color: var(--color-papel); box-shadow: none; }
+  .chip .mono { opacity: .7; }
+  /* A two- or three-state picker (Desk | List): the chosen one is a paper slip. */
+  .segmento { display: inline-flex; padding: 3px; border-radius: var(--radius-btn); background: var(--color-papel-2); }
+  .segmento > button { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 6px; color: var(--color-apoio); font-size: 14px; font-weight: 600; cursor: pointer; transition: color 120ms, background-color 120ms, scale 140ms var(--ease-saida); }
+  @media (min-width: 1024px) { .segmento > button { min-height: 30px; padding: 0 11px; font-size: 13.5px; } }
+  @media (hover: hover) { .segmento > button:hover { color: var(--color-texto-forte); } }
+  .segmento > button[aria-pressed="true"] { background: var(--color-branco); color: var(--color-texto-forte); box-shadow: var(--shadow-curta); }
+  /* A status on one mono line, with an icon: checked (green), warning (amber), error (terracotta). */
+  .estado { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .01em; white-space: nowrap; }
+  .estado > svg { width: 13px; height: 13px; flex: none; stroke-width: 2; }
+  .estado-ok { color: var(--color-verde); } .estado-aviso { color: var(--color-ambar); } .estado-erro { color: var(--color-terracota); }
+  /* Inline shortcut hints: "J K move · P produce". Desktop only. */
+  .dicas { display: none; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--color-apoio); font-family: var(--font-mono); font-size: 12px; }
+  .dicas > span { display: inline-flex; align-items: center; gap: 5px; }
+  @media (min-width: 1180px) { .dicas { display: flex; } }
+  /* A list of facts or checks, with the green check. */
+  .fatos { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+  .fatos > li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 9px; font-size: 14.5px; line-height: 1.45; }
+  .fatos > li > svg { width: 14px; height: 14px; margin-top: 3px; color: var(--color-verde); stroke-width: 2; }
+  /* A list table (To approve as a list, sources). */
+  .tabela { width: 100%; border-collapse: collapse; }
+  .tabela th { padding: 0 12px 8px; color: var(--color-apoio); font: 400 10.5px/1.2 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; text-align: left; white-space: nowrap; }
+  .tabela td { padding: 10px 12px; border-top: 1px solid var(--color-fio); vertical-align: middle; font-size: 14.5px; }
+  .tabela td.mono, .tabela td .estado { white-space: nowrap; }
+  @media (hover: hover) { .tabela tbody tr:hover { background: var(--color-papel-2); } }
+  .tabela-rola { overflow-x: auto; margin-inline: -12px; }
+  @media (max-width: 1023px) { .tabela .so-largo { display: none; } }
+}
+
+/* ── Ideas: the next action, the queue, the list of leads and the lead sheet ────────────────────────────────── */
+@layer components {
+  .agora { display: grid; gap: 28px; }
+  @media (min-width: 1180px) { .agora { grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); } }
+  .proxima { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; align-items: center; padding: 16px; border-radius: var(--radius-faixa); background: var(--color-branco); box-shadow: var(--shadow-curta); color: inherit; text-decoration: none; transition: box-shadow 200ms, transform 200ms var(--ease-saida), scale 140ms var(--ease-saida); }
+  @media (min-width: 1024px) { .proxima { grid-template-columns: 150px minmax(0, 1fr); gap: 28px; padding: 26px 28px 26px 30px; } }
+  @media (hover: hover) { a.proxima:hover { box-shadow: var(--shadow-eleva); transform: translateY(-2px); } }
+  a.proxima:active { scale: .992; }
+  .proxima-corpo { display: grid; gap: 7px; justify-items: start; min-width: 0; }
+  .proxima h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
+  @media (min-width: 1024px) { .proxima h2 { font-size: 24px; } }
+  .proxima-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--color-apoio); }
+  .fila-curta { display: grid; align-content: start; }
+  .fila-linha { display: grid; grid-template-columns: auto 34px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 52px; margin-inline: -8px; padding: 5px 8px; border-radius: var(--radius-faixa); color: inherit; text-decoration: none; }
+  .fila-linha + .fila-linha { box-shadow: 0 -1px 0 var(--color-fio); }
+  @media (hover: hover) { a.fila-linha:hover { background: var(--color-papel-2); box-shadow: none; } a.fila-linha:hover + .fila-linha { box-shadow: none; } }
+  a.fila-linha:active { background: var(--color-papel-3); }
+  .fila-linha b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 600; color: var(--color-texto-forte); }
+  .fila-linha .mono { color: var(--color-apoio); white-space: nowrap; }
+  .fila-linha .etapas { width: 120px; margin-top: 5px; }
+  .fila-mini { position: relative; display: block; width: 34px; aspect-ratio: 4 / 5; border-radius: 2px; overflow: hidden; background: var(--color-papel-2); box-shadow: 0 0 0 1px var(--color-fio-forte); }
+  .fila-mini > img { width: 100%; height: 100%; object-fit: cover; }
+  .fila-mini[data-vaga] { background: repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in srgb, var(--color-texto-forte) 9%, transparent) 7px 8px), var(--color-papel-2); }
+
+  .barra-lista { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 0 14px; }
+  .barra-lista > div:first-child { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  /* The list on the left, the lead sheet on the right (from 1180 px up). Below that the sheet goes away and each row carries its own summary and actions. */
+  .pauta-mesa { display: grid; gap: 28px; align-items: start; }
+  @media (min-width: 1180px) { .pauta-mesa { grid-template-columns: minmax(0, 1fr) minmax(0, 1.02fr); } }
+  .pauta-lista { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  .pauta-linha { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: start; padding: 13px 0; border-top: 1px solid var(--color-fio); }
+  .pauta-linha h3 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.28; letter-spacing: -.008em; }
+  .pauta-linha h3 > button { text-align: left; cursor: pointer; }
+  .pauta-linha .meta { grid-column: 2; display: flex; flex-wrap: wrap; gap: 2px 8px; color: var(--color-apoio); }
+  .pauta-linha .hora { padding-top: 3px; color: var(--color-apoio); white-space: nowrap; }
+  .pauta-cel { position: relative; z-index: 1; grid-column: 1 / -1; display: grid; gap: 10px; padding-top: 6px; }
+  .nova-pt { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--color-tinta); vertical-align: 2px; }
+  .folha-pauta { display: none; }
+  @media (min-width: 1180px) {
+    .pauta-linha { padding: 13px 14px 13px 16px; border-top: 0; border-radius: var(--radius-faixa); }
+    /* The whole row selects the idea: the title button covers the row. */
+    .pauta-linha h3 > button::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+    @media (hover: hover) { .pauta-linha:hover { background: var(--color-papel-2); } }
+    .pauta-linha[aria-current="true"] { background: var(--color-branco); box-shadow: var(--shadow-curta); }
+    .pauta-linha[aria-current="true"]::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 2px; background: var(--color-texto-forte); }
+    .pauta-linha[aria-current="true"] h3 { font-weight: 700; }
+    .pauta-cel { display: none; }
+    .folha-pauta { position: sticky; top: calc(var(--topo) + 8px); display: grid; gap: 18px; padding: 24px 26px 20px; border-radius: var(--radius-faixa); background: var(--color-branco); box-shadow: var(--shadow-curta); }
+  }
+  .folha-pauta-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: var(--color-apoio); }
+  .folha-pauta h2 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
+  .folha-pauta .resumo { margin: 0; font-size: 15.5px; line-height: 1.55; }
+  .formato { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .formato > button { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--radius-faixa); box-shadow: inset 0 0 0 1px var(--color-fio-forte); text-align: left; cursor: pointer; transition: box-shadow 120ms, background-color 120ms, scale 140ms var(--ease-saida); }
+  @media (hover: hover) { .formato > button:hover { background: var(--color-papel); } }
+  .formato > button[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--color-texto-forte); }
+  .formato b { display: block; font-size: 14px; line-height: 1.2; color: var(--color-texto-forte); }
+  .formato .mono { color: var(--color-apoio); font-size: 11px; }
+  .mini { display: flex; gap: 2px; }
+  .mini > i { width: 13px; height: 17px; border-radius: 1.5px; background: var(--color-fio-forte); }
+  .mini > i:first-child { background: var(--color-texto-forte); }
+  /* The lead's footer stays pinned to the end of the visible area: Produce is always in view, without scrolling. */
+  .folha-pauta-pe { position: sticky; bottom: var(--pe); z-index: 1; display: flex; align-items: center; gap: 8px; margin: 0 -26px -20px; padding: 14px 26px 16px; border-top: 1px solid var(--color-fio); border-radius: 0 0 var(--radius-faixa) var(--radius-faixa); background: var(--color-branco); }
+  .folha-pauta-pe > .mono { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-apoio); }
+  /* A row that opens a closed part (Already seen). */
+  .parte-linha { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; margin-top: 8px; padding: 0 14px 0 16px; border-top: 1px solid var(--color-fio); color: var(--color-texto-forte); font-weight: 600; cursor: pointer; }
+  @media (hover: hover) { .parte-linha:hover { background: var(--color-papel-2); } }
+  .parte-linha:active { background: var(--color-papel-3); }
+  .parte-linha > .mono { color: var(--color-apoio); font-weight: 400; }
+}
+
+/* ── Review: the queue in view, sentences and sources, the decision bar ────────────────────────────────────── */
+@layer components {
+  .rv-grade { display: grid; gap: 24px; align-items: start; }
+  @media (min-width: 1180px) { .rv-grade { grid-template-columns: 68px minmax(0, 1fr) 420px; } }
+  .rv-fila { display: grid; grid-auto-flow: column; justify-content: start; align-items: center; gap: 14px; }
+  .rv-fila > ol { display: grid; grid-auto-flow: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .rv-fila :is(a, button) { position: relative; display: block; width: 52px; border-radius: 3px; cursor: pointer; transition: transform 200ms var(--ease-saida), box-shadow 200ms, scale 140ms var(--ease-saida); }
+  /* What fades is the thumbnail, not the number: with the whole link at 62 %, the number dropped to 3.1:1 and axe failed it. */
+  .rv-fila .fila-mini { opacity: .62; transition: opacity 160ms; }
+  .rv-fila [aria-current="true"] .fila-mini { opacity: 1; }
+  @media (hover: hover) { .rv-fila :is(a, button):hover .fila-mini { opacity: 1; } }
+  .rv-fila [aria-current="true"] { transform: translateY(-2px); box-shadow: 0 0 0 2px var(--color-papel), 0 0 0 4px var(--color-texto-forte), 0 8px 12px -6px rgb(21 23 27 / .35); }
+  .rv-fila .prova-n { position: absolute; left: -6px; top: -6px; z-index: 2; height: 18px; }
+  .rv-fila .fila-mini { width: 52px; }
+  @media (min-width: 1180px) {
+    .rv-fila { position: sticky; top: calc(var(--topo) + 12px); grid-auto-flow: row; justify-items: center; gap: 10px; }
+    .rv-fila > ol { grid-auto-flow: row; }
+    .rv-fila [aria-current="true"] { transform: translateX(3px); }
+  }
+  /* The pointed sentence, on the art: the highlight is light because the art is always dark underneath. Position in % of the art (--x, --y, --w, --h). */
+  .chamada { position: absolute; z-index: 3; left: var(--x); top: var(--y); width: var(--w); height: var(--h); border-radius: 3px; background: color-mix(in srgb, var(--color-realce-arte) 16%, transparent); box-shadow: inset 0 0 0 1.5px var(--color-realce-arte); opacity: 0; pointer-events: none; transition: opacity 180ms; }
+  .chamada[data-on] { opacity: 1; }
+  .chamada > b { position: absolute; left: -9px; top: -9px; display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: var(--color-realce-arte); color: var(--color-sobre-realce); font: 400 11px/1 var(--font-mono); }
+  /* The check column: validation, headline, sentences and sources, caption. */
+  .conf { display: grid; gap: 18px; min-width: 0; }
+  .conf-validacao { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border-radius: var(--radius-faixa); background: var(--color-verde-claro); color: var(--color-verde); font-size: 14.5px; text-align: left; cursor: pointer; }
+  .conf-validacao[data-tom="aviso"] { background: var(--color-ambar-claro); color: var(--color-ambar); }
+  .conf-validacao b { color: inherit; }
+  .frases { display: grid; gap: 2px; margin-inline: -10px; }
+  .frase { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px 10px; width: 100%; padding: 9px 10px; border-radius: var(--radius-faixa); text-align: left; cursor: pointer; }
+  .frase:focus-visible, .frase[data-on] { background: var(--color-branco); box-shadow: var(--shadow-curta); }
+  @media (hover: hover) { .frase:hover { background: var(--color-branco); box-shadow: var(--shadow-curta); } }
+  .frase-n { display: grid; place-items: center; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--color-fio-forte); color: var(--color-texto-forte); font: 400 11px/1 var(--font-mono); }
+  .frase q { quotes: "“" "”"; color: var(--color-texto-forte); font-size: 14.5px; line-height: 1.42; }
+  .frase-fonte { grid-column: 2; display: grid; gap: 5px; }
+  .frase-fonte .estado { white-space: normal; }
+  .trecho { padding: 6px 9px; border-radius: var(--radius-card); background: var(--color-verde-claro); color: var(--color-texto-forte); font-size: 13.5px; line-height: 1.42; }
+  .frase:not([data-on]):not(:hover):not(:focus-visible) .trecho { display: none; }
+  /* Decision bar: pinned to the sheet's bottom (§9's "pinned bar" pattern). Always in view, never over the text: with a
+     step open it grows upwards. On mobile it sits above the navigation. */
+  .barra-decisao { position: sticky; bottom: calc(66px + env(safe-area-inset-bottom)); z-index: 6; margin-inline: -20px; background: var(--color-papel); border-top: 1px solid var(--color-fio-forte); }
+  .barra-decisao > div { display: grid; gap: 12px; padding: 8px 20px; }
+  @media (min-width: 1024px) { .barra-decisao { bottom: var(--pe); margin-inline: 0; border-radius: 0 0 10px 10px; } .barra-decisao > div { max-width: 1264px; margin-inline: auto; padding: 10px 40px; } }
+  .decisao-linha { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; }
+  .decisao-nota { display: none; gap: 4px; min-width: 0; }
+  .decisao-nota > p { margin: 0; color: var(--color-apoio); font-size: 13.5px; line-height: 1.4; }
+  @media (min-width: 1024px) { .decisao-nota { display: grid; } }
+  .decisao-botoes { display: flex; align-items: center; gap: 6px; width: 100%; }
+  .decisao-botoes > .btn-tinta { margin-left: auto; }
+  @media (min-width: 1024px) { .decisao-botoes { width: auto; margin-left: auto; } .decisao-botoes > .btn-tinta { min-width: 150px; margin-left: 10px; } }
+  .decisao-passo { display: grid; gap: 9px; width: min(100%, 560px); margin-left: auto; padding: 4px 0 12px; border-bottom: 1px solid var(--color-fio); }
+}
+
+/* The stage's dimension does not wrap: with the actions beside it, the label stays on one line. */
+@layer components { .palco-topo > p { white-space: nowrap; } }
+
+/* ── Ready to post and Posted ───────────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .postar-mesa { display: grid; gap: 36px; align-items: start; }
+  @media (min-width: 1180px) { .postar-mesa { grid-template-columns: minmax(0, 1fr) 440px; } }
+  .roteiro { display: grid; gap: 16px; padding: 22px 24px 20px; border-radius: var(--radius-faixa); background: var(--color-branco); box-shadow: var(--shadow-curta); }
+  @media (min-width: 1180px) { .roteiro { position: sticky; top: calc(var(--topo) + 8px); } }
+  .roteiro h2 { margin: 6px 0 0; font-size: 21px; letter-spacing: -.02em; line-height: 1.18; }
+  .passos { display: grid; margin: 0; padding: 0; list-style: none; counter-reset: passo; }
+  .passo { counter-increment: passo; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 4px 12px; padding: 13px 0; border-top: 1px solid var(--color-fio); }
+  .passo::before { content: counter(passo); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--color-fio-forte); color: var(--color-texto-forte); font: 400 12px/1 var(--font-mono); }
+  .passo[data-feito]::before { content: "✓"; background: var(--color-verde-claro); color: var(--color-verde); box-shadow: none; font-family: var(--font-sans); font-weight: 700; }
+  .passo > div { display: grid; gap: 7px; justify-items: start; min-width: 0; }
+  .passo > div > b { font-size: 15px; font-weight: 600; color: var(--color-texto-forte); }
+  .passo[data-feito] > div > b { color: var(--color-apoio); font-weight: 500; }
+  .passo p { margin: 0; color: var(--color-apoio); font-size: 14px; line-height: 1.45; }
+  /* The week's pace: seven bars (today in solid graphite), and the numbers beside them. */
+  .ritmo { display: grid; grid-template-columns: repeat(3, auto) 1fr; align-items: end; gap: 12px 44px; padding: 18px 0 20px; border-top: 2px solid var(--color-texto-forte); border-bottom: 1px solid var(--color-fio); }
+  .ritmo > div:first-child { grid-column: 1 / -1; max-width: 340px; }
+  @media (min-width: 1180px) { .ritmo { grid-template-columns: minmax(0, 300px) repeat(3, auto) 1fr; } .ritmo > div:first-child { grid-column: auto; max-width: none; } }
+  .semana { display: grid; grid-template-columns: repeat(7, 1fr); align-items: end; gap: 8px; height: 58px; }
+  .semana > i { display: block; justify-self: center; width: 16px; min-height: 3px; border-radius: 1px; background: color-mix(in srgb, var(--color-texto-forte) 42%, transparent); }
+  .semana > i[data-n="0"] { background: var(--color-fio-forte); }
+  .semana > i[data-hoje]:not([data-n="0"]) { background: var(--color-texto-forte); }
+  .semana-dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 6px; color: var(--color-apoio); font: 400 10.5px/1 var(--font-mono); text-align: center; }
+  .cifra { display: grid; gap: 2px; }
+  .cifra > b { font-size: 28px; font-weight: 700; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--color-texto-forte); }
+}
+
+/* ── Ideas: what only these screens use ───────────────────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* The next action (.proxima) uses the kit's proof art. The crop marks stay in view when it is the next action of
+     whoever decides (data-proxima) and, for the others, on hover or focus; the art responds to the whole block. */
+  .proxima .corte { --corte-fora: 12px; --corte-lado: 8px; }
+  .proxima[data-proxima] .prova-arte.corte::after, a.proxima:focus-visible .prova-arte.corte::after { opacity: 1; }
+  @media (hover: hover) {
+    a.proxima:hover .prova-arte { transform: rotate(-.6deg) translateY(-2px); }
+    a.proxima:hover .prova-arte.corte::after { opacity: 1; }
+    a.proxima:hover .prova-arte[data-pilha]::before { transform: translate(8px, -7px) rotate(2.8deg); }
+  }
+  /* The city filter is navigation (links with `?cidade=`): the chosen chip comes in aria-current, not in aria-pressed. */
+  .chip[aria-current="page"] { background: var(--color-texto-forte); color: var(--color-papel); box-shadow: none; }
+}
+
+/* ── To approve and Posted: what only these screens use ───────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* The proof's action that is not the next one (the next gets the pencil loop): in ink, with the arrow that moves 3 px
+     when pointing at the proof. A 44 px row, like the loop's: the actions line up across the row. */
+  .acao-seta { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--color-tinta); font-weight: 600; }
+  .acao-seta > svg { flex: none; transition: transform 200ms var(--ease-saida); }
+  @media (hover: hover) { a.prova:hover .acao-seta > svg { transform: translateX(3px); } }
+}
+
+/* The art only travels when both screens have it (the proof on the desk, the stage on the post). When only one has it (I
+   left the desk for another section with the proof still marked, or reached the post without going through the desk), it
+   leaves and enters together with the content, instead of staying 300 ms alone over the new screen. Reduced motion and
+   keyboard already remove everything in tokens.css (!important). */
+::view-transition-old(arte):only-child { animation: 90ms ease-out both troca-sai; }
+::view-transition-new(arte):only-child { animation: 180ms var(--ease-saida) 70ms both troca-entra; }
+
+/* ── Review: what only these screens use ───────────────────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* Below 1180 px the queue is a row: with many posts it scrolls sideways (like the strips), without cutting the number or
+     the open post's rule. */
+  @media (max-width: 1179px) {
+    .rv-fila > ol { position: relative; min-width: 0; margin: -8px -6px -8px -8px; padding: 8px 6px 8px 8px; overflow-x: auto; scrollbar-width: none; }
+    .rv-fila > ol::-webkit-scrollbar { display: none; }
+  }
+
+  /* The check column: a section title with a thin rule (the thick rule belongs to the list screens) and, on the right, the hint. */
+  .conf .secao { align-items: center; min-height: 34px; padding-top: 0; border-top: 1px solid var(--color-fio-forte); }
+  .conf .secao > :last-child:not(:first-child) { color: var(--color-apoio); font-size: 11.5px; letter-spacing: .01em; text-transform: none; }
+  .conf-validacao > span { min-width: 0; }
+  .frase q { overflow-wrap: anywhere; }
+  .frase-fonte a { color: inherit; }
+
+  /* From 1180 px up the proof shrinks with the window's height: stage, strips and decision bar fit on screen, without
+     scrolling (392 px = folio, stage top and bottom, strips and the bar with its sentence on two lines). With a step open
+     the bar grows and the proof gives way further. */
+  @media (min-width: 1180px) {
+    .rv-grade .palco-arte { width: min(100%, 404px, calc((100dvh - 392px) * .8)); min-width: 220px; }
+    #conteudo:has(.decisao-passo) .rv-grade .palco-arte { width: min(100%, 404px, calc((100dvh - 620px) * .8)); }
+  }
+}
+
+/* ── Ready to post and Publish: what only these screens use ────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* Ready to post in two columns: beside the script the proofs are up to 236 px (two or three per row), instead of
+     stretching to fill the column. The chosen one gets the graphite ring (the same as the strip's and the review
+     queue's) and the crop marks always showing: the script beside it is its own. */
+  @media (min-width: 1180px) { .postar-mesa .mesa { grid-template-columns: repeat(auto-fill, minmax(196px, 236px)); } }
+  .postar-mesa .prova[aria-current="true"] .prova-arte { box-shadow: 0 0 0 2px var(--color-papel), 0 0 0 4px var(--color-texto-forte), var(--shadow-prova); }
+  .postar-mesa .prova[aria-current="true"] .corte::after { opacity: 1; }
+
+  /* The script only stays pinned if the window is tall enough for it (the review stage's measure): in a short window,
+     Confirm would be off screen until the end of the desk. */
+  @media (min-width: 1180px) and (max-height: 819px) { .roteiro { position: static; } }
+
+  /* The step's title is a real title (h3). Done, it becomes the button that opens the step again: a 44 px touch target
+     without changing the row's height. */
+  .passo > div > h3 { margin: 0; color: var(--color-texto-forte); font-size: 15px; font-weight: 600; line-height: 24px; }
+  .passo[data-feito] > div > h3 { color: var(--color-apoio); font-weight: 500; }
+  .passo > div > h3 > button { margin-block: -10px; padding-block: 10px; text-align: left; cursor: pointer; }
+  .passo > div > h3 > button[aria-expanded="true"] { color: var(--color-texto-forte); }
+  @media (hover: hover) { .passo > div > h3 > button:hover { color: var(--color-texto-forte); } }
+}

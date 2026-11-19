@@ -2,32 +2,32 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import type { Env } from '../env';
 
 /**
- * Opções do Better Auth sem o banco. Compartilhado entre o Worker (D1 por request) e o config da CLI
- * (scripts/auth-schema.config.ts), que usa as mesmas opções pra gerar migrations/0002_auth.sql.
+ * Better Auth options without the database. Shared between the Worker (D1 per request) and the CLI config
+ * (scripts/auth-schema.config.ts), which uses the same options to generate migrations/0002_auth.sql.
  */
-export function opcoesAuth(env: Pick<Env, 'PUBLIC_BASE_URL' | 'BETTER_AUTH_SECRET' | 'GOOGLE_CLIENT_ID' | 'GOOGLE_CLIENT_SECRET'>) {
+export function optionsAuth(env: Pick<Env, 'PUBLIC_BASE_URL' | 'BETTER_AUTH_SECRET' | 'GOOGLE_CLIENT_ID' | 'GOOGLE_CLIENT_SECRET'>) {
   const base = env.PUBLIC_BASE_URL.replace(/\/$/, '');
   return {
     appName: 'Gazzpush',
     baseURL: base,
     basePath: '/api/auth',
     secret: env.BETTER_AUTH_SECRET,
-    // CSRF: o Better Auth confere Origin/Referer contra esta lista em toda mutação com cookie.
+    // CSRF: Better Auth checks Origin/Referer against this list on every mutation with a cookie.
     trustedOrigins: [base],
     emailAndPassword: { enabled: true, autoSignIn: true, minPasswordLength: 10 },
-    // Google entra quando houver client id/secret (docs/HANDOFF-lote1.md §6). Sem eles, só e-mail/senha.
+    // Google comes in when there is a client id/secret (docs/HANDOFF-lote1.md §6). Without them, email/password only.
     socialProviders: env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
       ? { google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET } }
       : {},
-    // Conectar o Google Docs vincula a conta Google à sessão (linkSocial com o escopo drive.file). A pessoa pode usar
-    // no Docs um Google de outro e-mail que o do cadastro: o vínculo é pedido por ela, logada.
+    // Connecting Google Docs links the Google account to the session (linkSocial with the drive.file scope). The person
+    // may use, for Docs, a Google account with a different email from their sign-up one: they request the link while signed in.
     account: { accountLinking: { allowDifferentEmails: true } },
-    // Credencial do Google só no servidor: as rotas que devolvem token de conta (inclusive o refresh token) saem do
-    // roteador HTTP. O Worker usa auth.api.getAccessToken por dentro; a tela pede o token curto do Picker a
+    // The Google credential stays on the server: the routes that return an account token (the refresh token included) stay off the
+    // HTTP router. The Worker uses auth.api.getAccessToken internally; the screen asks for the short-lived Picker token at
     // GET /api/google/token.
     disabledPaths: ['/refresh-token', '/get-access-token'],
     advanced: {
-      // httpOnly e SameSite=Lax são o padrão do Better Auth; Secure acompanha o esquema da baseURL.
+      // httpOnly and SameSite=Lax are Better Auth's defaults; Secure follows the baseURL's scheme.
       defaultCookieAttributes: { httpOnly: true, sameSite: 'lax' },
       useSecureCookies: base.startsWith('https://'),
     },
@@ -35,10 +35,10 @@ export function opcoesAuth(env: Pick<Env, 'PUBLIC_BASE_URL' | 'BETTER_AUTH_SECRE
   } satisfies Omit<BetterAuthOptions, 'database'>;
 }
 
-/** Uma instância por request: o binding D1 só existe dentro do request (factory, não singleton de módulo). */
-export function criarAuth(env: Env) {
-  return betterAuth({ ...opcoesAuth(env), database: env.DB });
+/** One instance per request: the D1 binding only exists inside the request (a factory, not a module singleton). */
+export function createAuth(env: Env) {
+  return betterAuth({ ...optionsAuth(env), database: env.DB });
 }
 
-export type Auth = ReturnType<typeof criarAuth>;
-export type Usuario = Auth['$Infer']['Session']['user'];
+export type Auth = ReturnType<typeof createAuth>;
+export type User = Auth['$Infer']['Session']['user'];

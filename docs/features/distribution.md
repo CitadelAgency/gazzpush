@@ -10,13 +10,13 @@ Routes are relative to `/api/t/:tenantId`.
 
 ## Cards
 
-A carousel is a sequence of cards rendered from HTML templates (`src/templates/card.html`, `src/templates/convite.html`)
+A carousel is a sequence of cards rendered from HTML templates (`src/templates/card.html`, `src/templates/cta.html`)
 by Browser Rendering (`src/lib/render.ts`). Templates and fonts are bundled with the Worker, so rendering makes no
 external request.
 
 Layouts (`LAYOUTS` in `src/lib/cards.ts`): `capa` (cover), `texto`, `citacao` (quote), `numero` (number), `lista`
 (list), `documento`, `comparacao`, `linha_do_tempo` (timeline) and `convite` (call to action). Text limits per layout
-are in `LIMITES`. A layout QA (`src/lib/qaLayout.ts`) measures every card (1080×1350 for carousels, 1080×1920 for Reels) for
+are in `LIMITS`. A layout QA (`src/lib/qaLayout.ts`) measures every card (1080×1350 for carousels, 1080×1920 for Reels) for
 overflow, overlap, fonts and images, and fails a card with the reason on the card itself.
 
 ### Proof cards
@@ -30,18 +30,18 @@ overflow, overlap, fonts and images, and fails a card with the reason on the car
 
 ### Watermark
 
-The outlet's logo, or its handle when there is no logo, semi-transparent (`src/lib/marcaDagua.ts`). The same HTML is
+The outlet's logo, or its handle when there is no logo, semi-transparent (`src/lib/watermark.ts`). The same HTML is
 used by the renderer and the in-app preview.
 
 ## Templates and compositions
 
-Up to six active templates per outlet (`MAX_ESTILOS`), under **Brand › Templates** (`/estilos`, `src/lib/estilos.ts`).
+Up to six active templates per outlet (`MAX_STYLES`), under **Brand › Templates** (`/estilos`, `src/lib/styles.ts`).
 A template is a catalog choice, not free design: composition, title box, role of the three colors, illustration
 technique, Reels pacing, and a suggested sequence of up to 6 layouts for the drafting model.
 
-- **Compositions** (`COMPOSICOES` in `src/lib/estilo.ts`): `padrao`, `tarja`, `coluna`, `cartaz` (poster, no artwork)
+- **Compositions** (`COMPOSITIONS` in `src/lib/style.ts`): `padrao`, `tarja`, `coluna`, `cartaz` (poster, no artwork)
   and `primeira-pagina` (front page). They apply to every layout except the call-to-action card. In the non-default
-  compositions all text sits on flat color, so QA also measures contrast: below 4.5:1 (`CONTRASTE_MINIMO`) the card
+  compositions all text sits on flat color, so QA also measures contrast: below 4.5:1 (`MIN_CONTRAST`) the card
   fails.
 - **Choosing a template.** A piece picks its template by post type, then by words in the title and summary (up to 8),
   then by section, then the outlet default. With no template, the default look applies.
@@ -54,16 +54,16 @@ technique, Reels pacing, and a suggested sequence of up to 6 layouts for the dra
 
 ## Illustration
 
-Pieces use generated artwork in a print technique, never a third-party photo (`src/lib/ilustrar.ts`).
+Pieces use generated artwork in a print technique, never a third-party photo (`src/lib/illustrate.ts`).
 
-- **Techniques** (`TECNICAS`): `xilogravura` (woodcut), `reticula` (halftone, the default `TECNICA_PADRAO`),
+- **Techniques** (`TECHNIQUES`): `xilogravura` (woodcut), `reticula` (halftone, the default `DEFAULT_TECHNIQUE`),
   `nanquim` (ink) or `referencia` ("brand image only": follows the outlet's reference image without naming a
   technique; without a reference image it falls back to halftone).
 - **Providers.** Image editing with Grok Imagine through **Kie** or **fal**, chosen per outlet under **AI keys**. They
   need a reference image: the outlet's brand reference, then `referencias/<tecnica>.png` in R2. Without either, Workers
   AI (`flux-1-schnell`) generates from a text description of the technique.
-- **Image QA** (`qaImagem`) uses a vision model to reject unusable images.
-- **Another illustration** (`POST /pecas/:id/cards/:cardId/ilustracao`): up to 3 per card (`MAX_ILUSTRACOES_CARD`). The
+- **Image QA** (`qaImage`) uses a vision model to reject unusable images.
+- **Another illustration** (`POST /pecas/:id/cards/:cardId/ilustracao`): up to 3 per card (`MAX_ILLUSTRATIONS_CARD`). The
   scene comes from the card's text, or from the piece's scene on the cover. The chosen one is saved with "Save and
   check". At render time a photo beats the card's illustration, which beats the piece's. Call-to-action, document and
   poster cards show no illustration.
@@ -72,8 +72,8 @@ Pieces use generated artwork in a print technique, never a third-party photo (`s
 
 ### Photos from the phone
 
-`POST /pecas/:id/fotos`: up to 2 MB per photo (`FOTO_MAX_BYTES`), JPEG, resized in the browser. A new photo requires
-stating who took it and who owns the rights (`AUTOR_FOTO_MAX` 80 characters). Framing uses a catalog of focal points,
+`POST /pecas/:id/fotos`: up to 2 MB per photo (`PHOTO_MAX_BYTES`), JPEG, resized in the browser. A new photo requires
+stating who took it and who owns the rights (`AUTHOR_PHOTO_MAX` 80 characters). Framing uses a catalog of focal points,
 not free positioning.
 
 ## Reels
@@ -86,9 +86,9 @@ Reels screen (`/t/:veiculo/p/:peca/reels`); the Reels becomes a new piece (forma
 
 - **No empty first frame.** The first frame already shows logo and title; only the cover's artwork animates in. The
   cover is saved as a JPEG in R2 and sent as `cover_url`; without it, `thumb_offset`.
-- **Pacing** (`RITMO_REELS`): each card stays 2 s plus 0.35 s per word, between 2.5 and 7 s; the call-to-action card
-  3.75 s; total between 7.5 and 60 s, scaled proportionally. Step multiplier (`PASSOS_REELS`): 0.8, 1 or 1.25. Motion
-  (`MOVIMENTOS_REELS`): `manchete`, `folha`, `seco`. A template stores step and motion in `params.reels`, and the Reels
+- **Pacing** (`REELS_PACE`): each card stays 2 s plus 0.35 s per word, between 2.5 and 7 s; the call-to-action card
+  3.75 s; total between 7.5 and 60 s, scaled proportionally. Step multiplier (`STEPS_REELS`): 0.8, 1 or 1.25. Motion
+  (`MOTIONS_REELS`): `manchete`, `folha`, `seco`. A template stores step and motion in `params.reels`, and the Reels
   screen can override them for one Reels. Longer Reels use proportionally more container time.
 
 ### Container requirements
@@ -119,7 +119,7 @@ reason on screen.
 ### Music library
 
 The repository ships no music. The library is short and lives in the `redacao-media` R2 bucket, curated by the
-operator, and applies to every outlet on the install (`src/lib/musica.ts`).
+operator, and applies to every outlet on the install (`src/lib/music.ts`).
 
 1. Only use tracks whose license allows **commercial use on social media** and does **not require credit** (Reels
    captions carry no music credit; a track with `"exigeCredito": true` is excluded). Keep the link to the track's
@@ -151,8 +151,8 @@ Reels screen shows each track's license, and "No music" is always available (`GE
 
 ### Narration in the outlet's own voice
 
-**With your voice** on the Reels screen (`src/lib/narracao.ts`, `src/lib/fala.ts`) shows the script (titles and card
-sentences, without the call-to-action card) and records or accepts a file of up to 90 s (`MAX_NARRACAO_S`). Whisper
+**With your voice** on the Reels screen (`src/lib/narration.ts`, `src/lib/speech.ts`) shows the script (titles and card
+sentences, without the call-to-action card) and records or accepts a file of up to 90 s (`MAX_NARRATION_S`). Whisper
 transcribes it and code compares speech with the script: a number or name missing or swapped becomes a warning with the
 time to listen; numbers spoken as words count, in Portuguese and English. Each warning needs "The speech is right" or a
 new recording (`POST /pecas/:id/narracao/:narracao/avisos/:indice`), and **Make the Reels** unlocks only when all are
@@ -168,22 +168,22 @@ the voice's SHA-256.
 validation as the brand logo) and period. A template turns on the sponsor band. The band reads "Publicidade ·
 Oferecimento" / "Advertisement · Sponsored by", written by code, separate from the text, in the place every composition
 reserves for the advertising label. The caption gets a fixed last line, "Sponsored by: name", that only code writes and
-`corpoDaLegenda` recognizes by exact name.
+`fromCaptionBody` recognizes by exact name.
 
 Sponsors that are expired, upcoming or archived do not appear. No band on the `policia` section
-(`EDITORIAS_SEM_PATROCINIO`), advertising, corrections, updates, the call-to-action card, or `autoral` outlets. A piece
+(`DESKS_WITHOUT_SPONSORSHIP`), advertising, corrections, updates, the call-to-action card, or `autoral` outlets. A piece
 freezes its sponsor at creation; a Reels inherits it from its source piece.
 
 ## Advertiser posts
 
-**New idea › Ad** (not in `autoral` mode). Advertiser name up to 80 characters (`ANUNCIANTE_MAX`), briefing up to 4,000.
+**New idea › Ad** (not in `autoral` mode). Advertiser name up to 80 characters (`ADVERTISER_MAX`), briefing up to 4,000.
 Each sentence of the post is tied to the briefing, and a price that differs from the briefing fails validation (numbers
 are compared whole, so `9,90` does not pass inside `19,90`). The advertising label is added by code: a badge on every
 card and an opening and closing line in the caption, in both languages. Removing the label from the caption in manual
 editing fails validation.
 
 - **Approval link** (`POST /pecas/:id/anuncio/link`, public `/anuncio/:token`): valid for 7 days
-  (`VALIDADE_LINK_DIAS`), only for the version it was created for; comment up to 1,000 characters. `GET` never
+  (`VALIDITY_LINK_DAYS`), only for the version it was created for; comment up to 1,000 characters. `GET` never
   decides, because messaging apps open links to build previews; only `POST` decides. The advertiser's answer shows in
   review but does not block **Approve**: the outlet decides what it publishes.
 - **Receipt** (`GET /pecas/:id/comprovante`): PDF via Browser Rendering, only for published pieces; `?html=1` returns
@@ -194,21 +194,21 @@ editing fails validation.
 ## Brand import from a site
 
 In the brand step of a new `local` or `tematico` outlet, "Already have a site? Paste the address"
-(`POST /marca/puxar`, `src/lib/puxarMarca.ts`, `src/lib/leituraSite.ts`) opens the site in Browser Rendering and
-suggests name, logo, colors and a font pair (`PARES_FONTES`: `padrao`, `jornal`, `grotesca`). Nothing is saved until
+(`POST /marca/puxar`, `src/lib/brandImport.ts`, `src/lib/siteReader.ts`) opens the site in Browser Rendering and
+suggests name, logo, colors and a font pair (`SOURCES_PAIRS`: `padrao`, `jornal`, `grotesca`). Nothing is saved until
 the person reviews and saves.
 
-Safeguards: only `http`/`https` to public addresses (`urlSegura`); 20 s timeout; images, video and fonts are not loaded;
+Safeguards: only `http`/`https` to public addresses (`safeUrl`); 20 s timeout; images, video and fonts are not loaded;
 the logo is taken from the header or an element marked as logo, never from inside `<article>`; SVG logos go through
-`sanitizarSvg`. JPEG and WebP are not accepted, because the brand takes PNG or SVG only. Up to 10 reads per outlet per
-24 hours (`MAX_PUXADAS_DIA`, `429` beyond).
+`sanitizeSvg`. JPEG and WebP are not accepted, because the brand takes PNG or SVG only. Up to 10 reads per outlet per
+24 hours (`MAX_IMPORTS_DAY`, `429` beyond).
 
 ## Content language
 
 The UI language is per person; the **content** language is per outlet (`tenants.idioma`, `pt-BR` or `en`), chosen at
 creation and changed under **Brand**. It applies to what is produced afterwards: the drafting prompt, fixed card
 texts ("Source:", date, section, "Follow"), the default call to action, the caption closing and validation (weekdays
-and capitalized words that are not names). Fixed texts live in `src/lib/idiomaConteudo.ts`. Validation stores
+and capitalized words that are not names). Fixed texts live in `src/lib/contentLanguage.ts`. Validation stores
 plain-language reasons in both languages (`validacao.en`), and review shows them in the reviewer's UI language.
 
 Known limits: triage is designed for Brazilian news, so an English outlet fits best in `autoral` or `tematico` mode; a
