@@ -6,9 +6,9 @@
 </p>
 
 <p align="center">
-  <strong>An open-source AI newsroom &amp; investigative writing desk.</strong><br>
-  Write investigative stories with every source checked in the margin — or let AI monitor feeds,
-  draft strictly from verified facts, and produce print-grade carousels and Reels.
+  <strong>An open-source writing assistant for investigative journalism.</strong><br>
+  Write the story with your sources beside the text and an editor's questions in the margin,
+  keep a record that holds up in court, and publish what you verified.
 </p>
 
 <p align="center">
@@ -24,21 +24,22 @@
 
 ---
 
-Gazzpush works in two modes for investigative journalists and independent outlets:
+Gazzpush is a writing assistant for people producing investigative journalism — the kind of reporting that has to hold
+up to an editor, a lawyer, and a court. You write in a story desk that keeps your material right beside the draft:
+links, 500-page PDFs, interview recordings, and clippings, searchable in one place and ready to quote with their
+citation. As you write, it puts an experienced editor's questions in the margin: who gave this number, does this math
+add up, is this quote on the tape, did you reach the other side.
 
-- **Investigative Story Desk:** Write in an editor with your links, 500-page PDFs, Whisper interview transcripts, and
-  clippings beside the draft. As you write, deterministic code and dual-model checks (DeepSeek/Gemini + Claude) verify
-  every claim verbatim against your dossier, recompute numbers, match quotes against the recording, flag legal risk,
-  send and log the right of reply, track FOI and court deadlines, watch sources after publication, archive links on the
-  Internet Archive, and export an RFC 3161 + SHA-256 defense package verifiable with OpenSSL.
-- **AI Newsroom Pipeline:** Monitor feeds continuously, deduplicate leads semantically, and let AI draft complete
-  stories, daily digests, and alternative headlines **strictly from verified facts** — deterministic validation rejects
-  any uncited sentence or invented number, date, or place before generating editorial print artwork (woodcut, halftone,
-  ink), 4:5 Proof Cards, and animated 9:16 Reels for one-key human approval or guardrailed Autopilot.
+Around the writing, it handles the heavy lifting of reporting and publishing: asking grounded questions of long PDFs,
+transcribing interviews with Whisper and matching quotes word for word, getting a second opinion from a second AI
+vendor, drafting freedom of information requests, sending and timestamping the right of reply, tracking court cases and
+source changes after publication, and exporting an RFC 3161 + SHA-256 defense package you can verify with OpenSSL. When
+you're ready to publish — or when monitoring beats and feeds — it can also draft sourced Instagram carousels, proof
+cards, and narrated 9:16 Reels directly from your verified facts.
 
-> **AI finds and drafts — deterministic code verifies, and you decide.** In the Story Desk, models never rewrite your
-> prose. In the newsroom pipeline, AI drafts only from extracted source facts, every citation is matched letter by
-> letter against the stored source in code, and every number is recomputed before anything reaches publication.
+> **AI assists; code verifies; you decide.** In the story desk, models point to passages and raise editorial notes
+> without rewriting your prose. When you ask Gazzpush to draft posts or Reels from your sources, deterministic code
+> checks every citation letter by letter and recomputes every number before anything goes out.
 
 ## Contents
 
