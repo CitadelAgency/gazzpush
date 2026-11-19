@@ -6,9 +6,9 @@
 </p>
 
 <p align="center">
-  <strong>An open-source writing assistant for investigative journalism.</strong><br>
-  Write the story with your sources beside the text and an editor's questions in the margin,
-  and keep a record of how it was reported that holds up.
+  <strong>An open-source AI newsroom &amp; investigative writing desk.</strong><br>
+  Write investigative stories with every source checked in the margin — or let AI monitor feeds,
+  draft strictly from verified facts, and produce print-grade carousels and Reels.
 </p>
 
 <p align="center">
@@ -24,22 +24,21 @@
 
 ---
 
-Gazzpush helps journalists write investigative stories: the kind that have to hold up to an editor, to a lawyer, to a
-court. You write in an editor that keeps your material next to the draft: the links, documents, interview recordings
-and clippings of the story, searchable in one place and ready to quote with their citation. While you write, it asks
-the questions an experienced editor would put in the margin: who gave this number, did you reach the other side, is
-this quote in any source. It finds the passage in your dossier that supports each sentence, so the questions point at
-what is actually missing.
+Gazzpush works in two modes for investigative journalists and independent outlets:
 
-Around the writing, it helps with the reporting: asking questions of long PDFs, transcribing interviews, drafting
-freedom of information requests, sending the right of reply and tracking deadlines. When the story is out, it keeps
-watching its sources, can export the whole reporting trail with cryptographic timestamps, and can turn the story into
-Instagram carousels and Reels that carry their sources with them.
+- **Investigative Story Desk:** Write in an editor with your links, 500-page PDFs, Whisper interview transcripts, and
+  clippings beside the draft. As you write, deterministic code and dual-model checks (DeepSeek/Gemini + Claude) verify
+  every claim verbatim against your dossier, recompute numbers, match quotes against the recording, flag legal risk,
+  send and log the right of reply, track FOI and court deadlines, watch sources after publication, archive links on the
+  Internet Archive, and export an RFC 3161 + SHA-256 defense package verifiable with OpenSSL.
+- **AI Newsroom Pipeline:** Monitor feeds continuously, deduplicate leads semantically, and let AI draft complete
+  stories, daily digests, and alternative headlines **strictly from verified facts** — deterministic validation rejects
+  any uncited sentence or invented number, date, or place before generating editorial print artwork (woodcut, halftone,
+  ink), 4:5 Proof Cards, and animated 9:16 Reels for one-key human approval or guardrailed Autopilot.
 
-> **It helps you write; it never writes for you.** Gazzpush uses language models to *find* things: which source
-> supports a sentence, which page answers a question. Nothing a model says is written into your text, and no answer is
-> trusted on its own: every citation is matched letter by letter against the stored source, and every number is
-> recomputed in code.
+> **AI finds and drafts — deterministic code verifies, and you decide.** In the Story Desk, models never rewrite your
+> prose. In the newsroom pipeline, AI drafts only from extracted source facts, every citation is matched letter by
+> letter against the stored source in code, and every number is recomputed before anything reaches publication.
 
 ## Contents
 
