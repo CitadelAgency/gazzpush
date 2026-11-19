@@ -18,9 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/CitadelAgency/gazzpush/raw/main/docs/media/gazzpush-teaser.mp4">
-    <img src="docs/media/gazzpush-teaser-poster.jpg" alt="Watch the Gazzpush teaser (0:48)" width="820">
-  </a>
+  <img src="docs/media/gazzpush-teaser.webp" alt="Gazzpush product teaser (0:48)" width="820"><br>
+  <sub><a href="https://github.com/CitadelAgency/gazzpush/raw/main/docs/media/gazzpush-teaser.mp4">Download 1080p MP4 with audio (0:48)</a></sub>
 </p>
 
 ---
