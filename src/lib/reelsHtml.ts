@@ -1,123 +1,124 @@
-// HTML da composição do Reels, compartilhado pelo renderizador e pelo Worker.
-/** Quanto cada card fica na tela: 2 s, mais 0,35 s por palavra, entre 2,5 e 7 s. O convite é copy curta e fixa. */
-export const RITMO_REELS = { base: 2, porPalavra: 0.35, minCard: 2.5, maxCard: 7, convite: 3.75, minTotal: 7.5, maxTotal: 60 } as const;
-export const PASSOS_REELS = [0.8, 1, 1.25] as const;
-export type PassoReels = (typeof PASSOS_REELS)[number];
-/** `seco`: corte direto. `manchete`: título, depois as frases, uma a uma. `folha`: o card seguinte entra deslizando. */
-export const MOVIMENTOS_REELS = ['manchete', 'folha', 'seco'] as const;
-export type MovimentoReels = (typeof MOVIMENTOS_REELS)[number];
-export interface RitmoReels { passo: PassoReels; movimento: MovimentoReels }
-export const RITMO_PADRAO: RitmoReels = { passo: 1, movimento: 'manchete' };
-/** O card que sai fica embaixo enquanto o seguinte desliza por cima. */
-const FOLHA_S = 0.5;
+// The Reels composition HTML (HyperFrames), pure and without imports: the Worker (src/lib/reels.ts) and the spike script
+// (scripts/spike-reels.mjs, on plain Node) build the same composition.
+/** How long each card stays on screen: 2 s, plus 0.35 s per word, between 2.5 and 7 s. The CTA is short, fixed copy. */
+export const REELS_PACE = { base: 2, porPalavra: 0.35, minCard: 2.5, maxCard: 7, convite: 3.75, minTotal: 7.5, maxTotal: 60 } as const;
+export const STEPS_REELS = [0.8, 1, 1.25] as const;
+export type ReelsStep = (typeof STEPS_REELS)[number];
+/** `seco`: straight cut. `manchete`: title, then the sentences, one by one. `folha`: the next card slides in. */
+export const MOTIONS_REELS = ['manchete', 'folha', 'seco'] as const;
+export type MotionReels = (typeof MOTIONS_REELS)[number];
+export interface ReelsPace { passo: ReelsStep; movimento: MotionReels }
+export const DEFAULT_PACE: ReelsPace = { passo: 1, movimento: 'manchete' };
+/** The outgoing card stays underneath while the next one slides over it. */
+const SHEET_S = 0.5;
 
 const ms = (n: number) => Math.round(n * 1000) / 1000;
-const palavras = (s: string) => s.split(/\s+/).filter(Boolean).length;
-export const totalReels = (tempos: number[]) => ms(tempos.reduce((a, b) => a + b, 0));
+const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
+export const totalReels = (times: number[]) => ms(times.reduce((a, b) => a + b, 0));
 
-/** Os segundos de cada card, pelo texto que aparece nele. O total fica entre 7,5 e 60 s, com ajuste proporcional. */
-export function temposReels(cards: { layout?: string; titulo?: string; frases?: { texto: string; rotulo?: string }[] }[], passo: number = RITMO_PADRAO.passo): number[] {
-  const { base, porPalavra, minCard, maxCard, convite, minTotal, maxTotal } = RITMO_REELS;
-  const brutos = cards.map((c) => {
-    if (c.layout === 'convite') return convite;
-    // A capa do carrossel mostra só o título.
-    const texto = c.layout === 'capa' ? c.titulo ?? '' : [c.titulo ?? '', ...(c.frases ?? []).flatMap((f) => [f.rotulo ?? '', f.texto])].join(' ');
-    return Math.min(maxCard, Math.max(minCard, (base + porPalavra * palavras(texto)) * passo));
+/** Each card's seconds, from the text shown on it. The total stays between 7.5 and 60 s, scaled proportionally. */
+export function timesReels(cards: { layout?: string; titulo?: string; frases?: { texto: string; rotulo?: string }[] }[], step: number = DEFAULT_PACE.passo): number[] {
+  const { base, porPalavra: perWord, minCard, maxCard, convite: invite, minTotal, maxTotal } = REELS_PACE;
+  const raw = cards.map((c) => {
+    if (c.layout === 'convite') return invite;
+    // The carousel cover only shows its title.
+    const text = c.layout === 'capa' ? c.titulo ?? '' : [c.titulo ?? '', ...(c.frases ?? []).flatMap((f) => [f.rotulo ?? '', f.texto])].join(' ');
+    return Math.min(maxCard, Math.max(minCard, (base + perWord * words(text)) * step));
   });
-  const soma = brutos.reduce((a, b) => a + b, 0);
-  if (!soma) return [];
-  const alvo = Math.min(maxTotal, Math.max(minTotal, soma));
-  const tempos = brutos.map((b) => ms((b * alvo) / soma));
-  // O arredondamento não pode tirar o total da faixa.
-  tempos[tempos.length - 1] = ms(tempos[tempos.length - 1] + ms(alvo) - totalReels(tempos));
-  return tempos;
+  const sum = raw.reduce((a, b) => a + b, 0);
+  if (!sum) return [];
+  const target = Math.min(maxTotal, Math.max(minTotal, sum));
+  const times = raw.map((b) => ms((b * target) / sum));
+  // Rounding must not take the total out of range.
+  times[times.length - 1] = ms(times[times.length - 1] + ms(target) - totalReels(times));
+  return times;
 }
 
-const pegar = (html: string, re: RegExp) => (html.match(re) ?? [])[1] ?? '';
+const take = (html: string, re: RegExp) => (html.match(re) ?? [])[1] ?? '';
 
 /**
- * Prefixa cada regra do CSS de um card com o id da cena: os templates usam seletores globais (`:root`, `header`,
- * `.card`) e, na composição, cada card é uma cena dentro da mesma página. `.r916 X` vira `#cena X` (a regra 9:16 vem
- * depois da de 4:5 no template e ganha pela ordem). As `@font-face` saem à parte (as mesmas em todos os cards).
+ * Prefixes each CSS rule of a card with the scene id: the templates use global selectors (`:root`, `header`, `.card`)
+ * and, in the composition, each card is a scene on the same page. `.r916 X` becomes `#scene X` (the 9:16 rule comes after
+ * the 4:5 one in the template and wins by order). The `@font-face` rules go separately (the same on every card).
  */
-export function escoparCss(css: string, id: string) {
-  let fontes = '';
-  const regras: string[] = [];
-  for (const bloco of css.replace(/\/\*[\s\S]*?\*\//g, '').split('}')) {
-    const i = bloco.indexOf('{');
+export function scopeCss(css: string, id: string) {
+  let sources = '';
+  const rules: string[] = [];
+  for (const block of css.replace(/\/\*[\s\S]*?\*\//g, '').split('}')) {
+    const i = block.indexOf('{');
     if (i < 0) continue;
-    const sel = bloco.slice(0, i).trim();
-    const corpo = bloco.slice(i + 1);
+    const sel = block.slice(0, i).trim();
+    const body = block.slice(i + 1);
     if (!sel) continue;
-    if (sel.startsWith('@font-face')) { fontes += `${sel}{${corpo}}\n`; continue; }
-    const novo = sel.split(',').map((s) => {
+    if (sel.startsWith('@font-face')) { sources += `${sel}{${body}}\n`; continue; }
+    const created = sel.split(',').map((s) => {
       s = s.trim();
       if (s === ':root' || s === 'body' || s === 'html') return `#${id}`;
       if (s === '*') return `#${id} *`;
       return `#${id} ${s.replace(/^html(\.[\w-]+)*\s+/, '').replace(/^\.r916\s+/, '')}`;
     }).join(', ');
-    regras.push(`${novo}{${corpo}}`);
+    rules.push(`${created}{${body}}`);
   }
-  return { fontes, css: regras.join('\n') };
+  return { fontes: sources, css: rules.join('\n') };
 }
 
-/** Marca que a frase e o item ganham no quadro 9:16, para entrar um a um. */
-export const CLASSE_FRASE = 'frase-rl';
+/** The tag sentences and items get in the 9:16 frame, so they enter one by one. */
+export const SENTENCE_CLASS = 'frase-rl';
 
-/** A entrada do card `i`. Número nunca "conta": valor intermediário não está na fonte, então nada mexe em texto. */
-function entradaDoCard(id: string, html: string, ini: number, cada: number, movimento: MovimentoReels, i: number, fala?: number[]): string[] {
-  const anim = [`tl.fromTo('#${id} .art', { scale: 1.08 }, { scale: 1, duration: ${cada}, ease: 'none' }, ${ini});`];
+/** Card `i`'s entrance. Numbers never "count up": an intermediate value is not in the source, so no text moves. */
+function inputCard(id: string, html: string, ini: number, each: number, motion: MotionReels, i: number, speech?: number[]): string[] {
+  const anim = [`tl.fromTo('#${id} .art', { scale: 1.08 }, { scale: 1, duration: ${each}, ease: 'none' }, ${ini});`];
   if (i === 0) return anim;
-  // Com voz, a frase é a legenda: o texto aprovado entra na hora em que é dito, na área que o QA 9:16 já mediu.
-  const legenda = (fala ?? []).map((t, k) => `tl.fromTo('#${id} .${CLASSE_FRASE}:nth-of-type(${k + 1}), #${id} .story-list li:nth-child(${k + 1})', { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power1.out' }, ${ms(t)});`);
-  if (movimento === 'seco') return [...anim, ...legenda];
-  if (movimento === 'folha') return [...anim, `tl.fromTo('#${id}', { xPercent: 100 }, { xPercent: 0, duration: ${FOLHA_S}, ease: 'power2.out' }, ${ini});`, ...legenda];
+  // With voice, the sentence is the subtitle: the approved text enters when it is spoken, in the area the 9:16 QA already measured.
+  const caption = (speech ?? []).map((t, k) => `tl.fromTo('#${id} .${SENTENCE_CLASS}:nth-of-type(${k + 1}), #${id} .story-list li:nth-child(${k + 1})', { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power1.out' }, ${ms(t)});`);
+  if (motion === 'seco') return [...anim, ...caption];
+  if (motion === 'folha') return [...anim, `tl.fromTo('#${id}', { xPercent: 100 }, { xPercent: 0, duration: ${SHEET_S}, ease: 'power2.out' }, ${ini});`, ...caption];
   anim.push(`tl.fromTo('#${id} header', { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power1.out' }, ${ms(ini + 0.05)});`);
-  const frases = html.split(`class="${CLASSE_FRASE}"`).length - 1;
-  const itens = html.includes('story-list') ? (html.match(/<li>/g) ?? []).length : 0;
-  const n = frases + itens;
-  if (fala?.length) return [...anim, `tl.fromTo('#${id} .location, #${id} h1', { y: 48, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, ${ms(ini + 0.15)});`, ...legenda];
+  const sentences = html.split(`class="${SENTENCE_CLASS}"`).length - 1;
+  const items = html.includes('story-list') ? (html.match(/<li>/g) ?? []).length : 0;
+  const n = sentences + items;
+  if (speech?.length) return [...anim, `tl.fromTo('#${id} .location, #${id} h1', { y: 48, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, ${ms(ini + 0.15)});`, ...caption];
   if (!n) return [...anim, `tl.fromTo('#${id} .story', { y: 48, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, ${ms(ini + 0.15)});`];
-  // Todas na tela até 60% do tempo do card: o resto é para ler.
-  const passo = ms(Math.min(0.9, Math.max(0.25, (cada * 0.6 - 0.75) / n)));
-  const alvo = frases ? `#${id} .${CLASSE_FRASE}` : `#${id} .story-list li`;
+  // All on screen by 60% of the card's time: the rest is for reading.
+  const step = ms(Math.min(0.9, Math.max(0.25, (each * 0.6 - 0.75) / n)));
+  const target = sentences ? `#${id} .${SENTENCE_CLASS}` : `#${id} .story-list li`;
   anim.push(
     `tl.fromTo('#${id} .location, #${id} h1', { y: 48, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, ${ms(ini + 0.15)});`,
-    `tl.fromTo('${alvo}', { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power1.out', stagger: ${passo} }, ${ms(ini + 0.75)});`,
+    `tl.fromTo('${target}', { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power1.out', stagger: ${step} }, ${ms(ini + 0.75)});`,
   );
   return anim;
 }
 
 /**
- * A composição HyperFrames (contrato da skill hyperframes-core): raiz com `data-composition-id`, cada card um `.clip`
- * com `data-start`/`data-duration`, um timeline GSAP pausado em `window.__timelines["reels"]`. A arte aproxima devagar
- * nos três movimentos. O primeiro card fica inteiro desde o frame 0 (só a arte anda): quem abre o Reels lê a manchete
- * antes de qualquer animação. Nada de relógio, aleatório ou rede. `tempos`: os segundos de cada card. `musica`: nome do
- * arquivo que o Container grava ao lado. Na `folha` o clipe anterior dura mais um pouco, em outra trilha (clipes da
- * mesma trilha não se sobrepõem), e a ordem no DOM deixa o card novo por cima. `voz`: o arquivo da fala e o momento de
- * cada frase, por card; a voz toca com volume 1, e a música, se houver, fica em 0,15.
+ * The HyperFrames composition (hyperframes-core skill contract): a root with `data-composition-id`, each card a `.clip`
+ * with `data-start`/`data-duration`, a paused GSAP timeline at `window.__timelines["reels"]`. The art zooms in slowly in
+ * all three motions. The first card is whole from frame 0 (only the art moves): whoever opens the Reels reads the
+ * headline before any animation. No clocks, randomness or network. `tempos`: each card's seconds. `musica`: name of the
+ * file the Container writes next to it. In `folha` the previous clip lasts a little longer, on another track (clips on
+ * the same track do not overlap), and DOM order puts the new card on top. `voz`: the speech file and each sentence's
+ * moment, per card; the voice plays at volume 1, and the music, if any, at 0.15.
  */
-export function composicaoReels(o: { cards: string[]; tempos: number[]; movimento: MovimentoReels; musica?: string | null; voz?: { arquivo: string; duracao: number; frases: number[][] } | null; gsap?: string; idioma?: 'pt-BR' | 'en' }): string {
-  const duracao = totalReels(o.tempos);
-  let fontes = '';
+export function compositionReels(o: { cards: string[]; tempos: number[]; movimento: MotionReels; musica?: string | null; voz?: { arquivo: string; duracao: number; frases: number[][] } | null; gsap?: string; idioma?: 'pt-BR' | 'en' }): string {
+  const duration = totalReels(o.tempos);
+  let sources = '';
   let ini = 0;
-  const estilos: string[] = [];
-  const cenas: string[] = [];
+  const styles: string[] = [];
+  const scenes: string[] = [];
   const anim: string[] = [];
   o.cards.forEach((html, i) => {
     const id = `c${i + 1}`;
-    const { fontes: f, css } = escoparCss(pegar(html, /<style>([\s\S]*?)<\/style>/), id);
-    if (!fontes) fontes = f;
-    estilos.push(css);
-    const artigo = pegar(html, /(<article[\s\S]*<\/article>)/);
-    const cada = o.tempos[i];
-    const sobra = o.movimento === 'folha' && i < o.cards.length - 1 ? FOLHA_S : 0;
-    cenas.push(`<div id="${id}" class="clip cena" data-start="${ini}" data-duration="${ms(cada + sobra)}" data-track-index="${o.movimento === 'folha' ? i % 2 : 0}">${artigo}</div>`);
-    anim.push(...entradaDoCard(id, html, ini, cada, o.movimento, i, o.voz?.frases[i]));
-    ini = ms(ini + cada);
+    const { fontes: f, css } = scopeCss(take(html, /<style>([\s\S]*?)<\/style>/), id);
+    if (!sources) sources = f;
+    styles.push(css);
+    const article = take(html, /(<article[\s\S]*<\/article>)/);
+    const each = o.tempos[i];
+    const leftover = o.movimento === 'folha' && i < o.cards.length - 1 ? SHEET_S : 0;
+    scenes.push(`<div id="${id}" class="clip cena" data-start="${ini}" data-duration="${ms(each + leftover)}" data-track-index="${o.movimento === 'folha' ? i % 2 : 0}">${article}</div>`);
+    anim.push(...inputCard(id, html, ini, each, o.movimento, i, o.voz?.frases[i]));
+    ini = ms(ini + each);
   });
   const audio = [
-    o.musica ? `<audio id="musica" src="${o.musica}" data-start="0" data-duration="${duracao}" data-volume="${o.voz ? 0.15 : 0.5}"></audio>` : '',
+    o.musica ? `<audio id="musica" src="${o.musica}" data-start="0" data-duration="${duration}" data-volume="${o.voz ? 0.15 : 0.5}"></audio>` : '',
     o.voz ? `<audio id="voz" src="${o.voz.arquivo}" data-start="0" data-duration="${o.voz.duracao}" data-volume="1"></audio>` : '',
   ].filter(Boolean).join('\n');
   return `<!doctype html>
@@ -127,16 +128,16 @@ export function composicaoReels(o: { cards: string[]; tempos: number[]; moviment
 <meta name="viewport" content="width=1080, height=1920">
 <script src="${o.gsap ?? 'gsap.min.js'}"></script>
 <style>
-${fontes}
+${sources}
 body { margin: 0; background: #000; }
 #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
 .cena { position: absolute; inset: 0; }
-${estilos.join('\n')}
+${styles.join('\n')}
 </style>
 </head>
 <body>
-<div id="root" data-composition-id="reels" data-start="0" data-width="1080" data-height="1920" data-duration="${duracao}">
-${cenas.join('\n')}
+<div id="root" data-composition-id="reels" data-start="0" data-width="1080" data-height="1920" data-duration="${duration}">
+${scenes.join('\n')}
 ${audio}
 </div>
 <script>

@@ -6,9 +6,9 @@
 </p>
 
 <p align="center">
-  <strong>An open-source verification desk for investigative journalism.</strong><br>
-  Tie every sentence to a source, keep a defensible record of how a story was reported,
-  and publish only what you can prove.
+  <strong>An open-source writing assistant for investigative journalism.</strong><br>
+  Write the story with your sources beside the text and an editor's questions in the margin,
+  and keep a record of how it was reported that holds up.
 </p>
 
 <p align="center">
@@ -19,18 +19,22 @@
 
 ---
 
-Gazzpush is a toolkit and assistant for reporters and editors who work on stories that have to hold up: to an editor,
-to a lawyer, to a court. It sits next to the text while you write. It checks each claim against your dossier, verifies
-quotes against interview recordings, answers questions about long PDFs with page-level citations, tracks freedom of
-information deadlines and court cases, and packages the whole reporting trail with cryptographic timestamps.
+Gazzpush helps journalists write investigative stories: the kind that have to hold up to an editor, to a lawyer, to a
+court. You write in an editor that keeps your material next to the draft: the links, documents, interview recordings
+and clippings of the story, searchable in one place and ready to quote with their citation. While you write, it asks
+the questions an experienced editor would put in the margin: who gave this number, did you reach the other side, is
+this quote in any source. It finds the passage in your dossier that supports each sentence, so the questions point at
+what is actually missing.
 
-When a story is ready, Gazzpush turns the verified claims, and only those, into Instagram carousels and Reels that
-carry their sources with them.
+Around the writing, it helps with the reporting: asking questions of long PDFs, transcribing interviews, drafting
+freedom of information requests, sending the right of reply and tracking deadlines. When the story is out, it keeps
+watching its sources, can export the whole reporting trail with cryptographic timestamps, and can turn the story into
+Instagram carousels and Reels that carry their sources with them.
 
-> **The model points, the code verifies.** Gazzpush uses language models to *find* things: which source supports a
-> sentence, which page answers a question. It never trusts the answer on its own. Every citation is matched letter by
-> letter against the stored source, every number is recomputed in code, and nothing the model says is written into
-> your text.
+> **It helps you write; it never writes for you.** Gazzpush uses language models to *find* things: which source
+> supports a sentence, which page answers a question. Nothing a model says is written into your text, and no answer is
+> trusted on its own: every citation is matched letter by letter against the stored source, and every number is
+> recomputed in code.
 
 ## Contents
 
@@ -45,9 +49,25 @@ carry their sources with them.
 
 ## What it does
 
-### Verify while you write
+### Write
 
-The **story desk** is a rich-text editor with a fact-checker in the margin.
+The **story desk** is a rich-text editor built around the material of the story.
+
+- **Material on the side.** The story's links, PDFs, recordings and clippings, plus sources saved from earlier
+  stories, in a column next to the draft with one search across all of them. Read a source beside your text, clip a
+  passage, and insert it as it is, with its citation.
+- **Interview quotes.** Search the transcripts of your recordings and drop a passage of speech into the text.
+- **Cite as you type.** `@` cites from the dossier; pasting a bare link offers to add it to the dossier.
+- **A blue-pencil reviewer.** One question per paragraph in the margin, the one an experienced editor would ask
+  first. The questions are fixed in code: they cost nothing, cannot hallucinate, and read the same for everyone.
+- **A second read.** On request, a model acting as an editor points at the opening, an unanswered question, what
+  could go. Each note points to a passage; you decide.
+- **Focus mode, autosave and versions.** Earlier versions can be viewed and restored at any time.
+- **A style guide** for the outlet, whose rules point things out and never rewrite.
+
+### Check as you write
+
+The questions in the margin come from checks that run on each paragraph you finish.
 
 - **Claim-by-claim checking against a dossier.** Each paragraph is checked against the links, documents, replies and
   FOI responses you attached. A claim is marked *supported* only when the code finds the cited passage, verbatim, in the
@@ -59,8 +79,6 @@ The **story desk** is a rich-text editor with a fact-checker in the margin.
   minors, block publication until someone resolves them or an editor signs off.
 - **A second opinion.** Risky paragraphs can go to a second model from a different vendor. Topics that some models are
   known to soften are routed to it entirely. When the two disagree, the flag stays open.
-- **A blue-pencil reviewer.** Fixed, code-generated editor questions in the margin. They cost nothing, cannot
-  hallucinate, and read the same for everyone.
 - **Source strength and an audit view.** Official documents count as strong evidence, anonymous sources as weak.
   The audit view breaks six months of flags down by month, topic and person, so you can see whether checking weighs
   more heavily on one side.
@@ -210,16 +228,18 @@ Every environment variable is listed in [docs/configuration.md](docs/configurati
 | [Development](docs/development.md) | Local loop, tests, end-to-end tests, code conventions |
 | [Feature reference](docs/features/README.md) | Story desk, legal shield, documents and recordings, living stories, pipeline, distribution |
 | [Integrations](docs/integrations.md) | Google Docs, Stripe, email, DataJud |
-| [Glossary](docs/glossary.md) | Portuguese terms used in the code and their English meaning |
+| [Glossary](docs/glossary.md) | Portuguese terms that remain in the code (tables, routes, stored values) and their English meaning |
 | [Design system](DESIGN.md) | Tokens, typography, layout and interaction rules for the web app |
 
 ## Project status
 
 Gazzpush is in active development. Expect breaking changes until 1.0. Things to know before you adopt it:
 
-- **The code speaks Portuguese.** Identifiers, tables and routes use Brazilian newsroom vocabulary (`materia`,
-  `dossie`, `pauta`). The UI is fully bilingual (English and Portuguese, per user), and published content can be in
-  either language per outlet. The [glossary](docs/glossary.md) maps every term.
+- **Some names stay in Portuguese.** Functions, variables and comments are in English, but database tables, HTTP
+  routes and stored values keep the Brazilian newsroom vocabulary (`pautas`, `pecas`, `textos`), because changing them
+  would break stored data and external links. The UI is fully bilingual (English and Portuguese, per user), and
+  published content can be in either language per outlet. The [glossary](docs/glossary.md) maps every Portuguese term
+  that remains.
 - **Some features are Brazil-specific.** FOI requests follow Brazil's Lei 12.527/2011, court tracking uses the CNJ's
   DataJud, and the local-news triage knows Brazilian municipalities (IBGE). Everything else is country-neutral.
 - **Cloudflare-native.** The app relies on Workers, D1, R2, Queues, Workflows, Vectorize, Browser Rendering and

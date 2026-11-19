@@ -2,8 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-// SPA servida como `assets` do Worker (wrangler.jsonc). Dev: `npm run web:dev` (build --watch) + `npm run dev`,
-// mesma origem em localhost:8787. Nunca proxy 5173→8787: cookie e CSRF por Origin quebram.
+// SPA served as the Worker's `assets` (wrangler.jsonc). Dev: `npm run web:dev` (build --watch) + `npm run dev`,
+// same origin on localhost:8787. Never proxy 5173→8787: cookies and CSRF by Origin break.
 export default defineConfig({
   root: import.meta.dirname,
   plugins: [react(), tailwindcss()],

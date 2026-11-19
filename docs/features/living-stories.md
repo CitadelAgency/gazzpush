@@ -3,7 +3,7 @@
 Publishing is not the end of an investigation. Sources get edited or deleted, the people in the story make news again,
 court cases move, and public bodies owe answers on a legal deadline. A living story keeps watching after publication
 and turns each change into an alert, with a clear next step: update the text, publish an update or a correction, or
-file the next appeal. Logic in `src/lib/viva.ts` (alerts and court cases) and `src/lib/lai.ts` (FOI requests); routes
+file the next appeal. Logic in `src/lib/living.ts` (alerts and court cases) and `src/lib/lai.ts` (FOI requests); routes
 relative to `/api/t/:tenantId/textos`. Part of the [story desk](story-desk.md), available to `autoral` outlets.
 
 > **Brazil-specific.** Court-case tracking (DataJud, CNJ case numbers) and FOI requests (Lei de Acesso à Informação,
@@ -34,7 +34,7 @@ Editors only.
 - **Update post** or **Correction post** (`POST /:id/alertas/:alerta/post`): the person writes what changed, 20 to 600
   characters, in their own words; it becomes their statement. A new single-image post is produced with "Atualização:"
   or "Errata:" ("Update:" / "Correction:" for English outlets) in the headline, on the cover and in the caption, added
-  by code (`pautas.tipo_post`, `TIPOS_POST`). The earlier post is not touched: Instagram does not let you replace the
+  by code (`pautas.tipo_post`, `POST_TYPES`). The earlier post is not touched: Instagram does not let you replace the
   image of a published post. The text itself only changes when the person edits it.
 
 If production of the post could not start, the alert goes back to open and the leftover lead is discarded; trying again
@@ -70,7 +70,7 @@ An unsourced sentence that cites a public body (Prefeitura, Câmara, Secretaria,
 detected by code) becomes a candidate. The app drafts the request in Portuguese with its legal basis: Constitution art.
 5, XXXIII; Law 12.527/2011, no reason required (art. 10 §3), 20 days extendable by 10 (art. 11 §§1–2), the non-secret
 part must be released (art. 7 §2). The sentence is checked letter by letter against the paragraph (`422 trecho_fora`).
-Levels (`ESFERAS`): `federal`, `estadual`, `municipal`. Route: `POST /:id/lai`.
+Levels (`LEVELS`): `federal`, `estadual`, `municipal`. Route: `POST /:id/lai`.
 
 ### Filing
 
@@ -81,7 +81,7 @@ government portal**. Afterwards the person records the protocol number and date.
 
 ### Deadlines
 
-Counted in calendar days from the filing date (`PRAZO_DIAS` 20, `PRORROGACAO_DIAS` 10, `RECURSO_DIAS` 10).
+Counted in calendar days from the filing date (`DAYS_DEADLINE` 20, `EXTENSION_DAYS` 10, `APPEAL_DAYS` 10).
 
 - A deadline that falls on a Saturday, Sunday, national holiday or Good Friday moves to the next business day. For
   federal bodies it also skips the federal optional days (Carnival Monday and Tuesday, Corpus Christi).

@@ -15,7 +15,7 @@ CREATE TABLE arquivos (
   erro TEXT,
   paginas INTEGER,
   vetor TEXT,                                -- indexado | desligado | falhou: a busca por sentido (sem ela, só por palavra)
-  entidades_json TEXT,                       -- pessoas, empresas, valores e datas, com as páginas (por código)
+  entidades_json TEXT,                       -- pessoas, empresas, CNPJs, valores e datas, com as páginas (por código)
   totais_json TEXT,                          -- total ou soma de valores por página, para cruzar com o texto
   por TEXT NOT NULL REFERENCES "user"(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

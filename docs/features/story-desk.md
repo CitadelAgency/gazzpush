@@ -1,20 +1,24 @@
 # Story desk
 
-The story desk is where a journalist writes a story and proves it. Every claim in the text is checked against a
-dossier of evidence: a language model points at the passage that might support the claim, and deterministic code
-confirms that the passage exists, letter by letter, in the stored copy of the source. Nothing in this flow rewrites the
-journalist's words. The result is a text where every sentence either has a source, is marked as the author's opinion,
-or is visibly flagged before publication.
+The story desk is where a journalist writes an investigative story. It is an editor with the story's material beside
+the draft (sources, documents, recordings and clippings, ready to read, search and quote), a reviewer that asks an
+editor's questions in the margin, and helpers for quotes, a second read and versions. Nothing in it writes for the
+journalist.
+
+The margin questions come from checks that run as the text is written. Every claim is checked against the dossier of
+evidence: a language model points at the passage that might support the claim, and deterministic code confirms that the
+passage exists, letter by letter, in the stored copy of the source. By publication, every sentence either has a
+source, is marked as the author's opinion, or is visibly flagged.
 
 > **Availability.** The story desk (the **Texts** section, `/t/:veiculo/textos`) is enabled for outlets in `autoral`
-> mode. For `local` and `tematico` outlets the text routes answer `404` (`src/shell/textos.ts`) and the section is
-> hidden in the app shell (`web/src/casca/Casca.tsx`).
+> mode. For `local` and `tematico` outlets the text routes answer `404` (`src/shell/texts.ts`) and the section is
+> hidden in the app shell (`web/src/shell/Shell.tsx`).
 
 All routes below are relative to `/api/t/:tenantId/textos`.
 
 ## The story record
 
-A story (`textos`, `src/lib/materia.ts`) opens on the desk at `/t/:veiculo/textos/:id` with four tabs, selected by
+A story (`textos`, `src/lib/story.ts`) opens on the desk at `/t/:veiculo/textos/:id` with four tabs, selected by
 `?aba=`:
 
 | Tab | What it holds |
@@ -24,13 +28,13 @@ A story (`textos`, `src/lib/materia.ts`) opens on the desk at `/t/:veiculo/texto
 | **Posts** | Every piece produced from the story, linked through `pautas.texto_id`. |
 | **After** | Follow-up alerts after publication. See [Living stories](living-stories.md). |
 
-A text can come from Google Docs, be pasted, or be written in the app (`ORIGENS_TEXTO`: `docs`, `colado`,
-`escrito`). Limits: 100,000 characters (`TEXTO_MAX`) and 2,000 paragraphs (`PARAGRAFOS_MAX`).
+A text can come from Google Docs, be pasted, or be written in the app (`ORIGINS_TEXT`: `docs`, `colado`,
+`escrito`). Limits: 100,000 characters (`TEXT_MAX`) and 2,000 paragraphs (`PARAGRAPHS_MAX`).
 
 ## Editor
 
 - **Tiptap (ProseMirror)**, loaded only on the desk route. Allowed formatting: paragraph, heading, bold, italic, link and
-  blockquote. The server strips everything else (`limparDoc`, `src/lib/doc.ts`). A quote inside a quote, or a list,
+  blockquote. The server strips everything else (`cleanDoc`, `src/lib/doc.ts`). A quote inside a quote, or a list,
   is saved as a paragraph so no text is lost.
 - The document is stored in `textos.doc_json` with a **stable id per block**. `paragrafos_json` is derived from it for
   Google Docs, Substack and Instagram.
@@ -39,14 +43,14 @@ A text can come from Google Docs, be pasted, or be written in the app (`ORIGENS_
 
 ## Claim-by-claim check
 
-`POST /:id/conferir` runs the check (`conferirBlocos` in `src/lib/mesa.ts`).
+`POST /:id/conferir` runs the check (`checkBlocks` in `src/lib/desk.ts`).
 
 - **Per block, by hash.** Each block stores the hash of its text (table `blocos`). Only blocks whose hash changed go
-  to the model. Up to 4 calls run in parallel (`PARALELO`), each with the dossier and the full text as a shared prefix
+  to the model. Up to 4 calls run in parallel (`PARALLEL`), each with the dossier and the full text as a shared prefix
   (cheaper with providers that cache prompt prefixes) and the block at the end.
-- **Rounds.** At most 150 blocks per request (`LOTE_CONFERENCIA`); the screen requests the next round on its own.
-- **Result per claim** (`ESTADOS_AFIRMACAO`): `com_evidencia` (supported), `sem_fonte` (no source) or `risco` (legal
-  risk). Risk categories (`CATEGORIAS_RISCO`): `acusacao_sem_condenacao` (accusation without conviction),
+- **Rounds.** At most 150 blocks per request (`BATCH_CHECK`); the screen requests the next round on its own.
+- **Result per claim** (`STATES_CLAIM`): `com_evidencia` (supported), `sem_fonte` (no source) or `risco` (legal
+  risk). Risk categories (`CATEGORIES_RISK`): `acusacao_sem_condenacao` (accusation without conviction),
   `vitima_ou_menor` (victim or minor exposed), `sem_outro_lado` (no right of reply). When several apply, the mark keeps
   the most serious one.
 - **Never silent.** If the model is down, refuses, or returns invalid output, the block stays **not checked** with the
@@ -72,14 +76,14 @@ when.
 
 ## Checks done by code, not by the model
 
-These run without any model call (`src/lib/apuracao.ts`, `src/lib/assistente.ts`):
+These run without any model call (`src/lib/reporting.ts`, `src/lib/assistant.ts`):
 
 - **Arithmetic.** Percentage change ("from X to Y, up Z%"), part of a whole ("12 of 40, 30%") and sums, in Portuguese
   and English, with the rounding tolerance implied by the written figure. A wrong figure is flagged with the correct
   one ("From 10,000,000 to 15,000,000 is a 50% increase, not 40%."). The author corrects it.
 - **Quotes.** A quoted passage that is not in the dossier is flagged. Recordings can clear it: see
   [Documents and recordings](documents-and-recordings.md#quote-check).
-- **Evidence strength** by source type (`PATCH /:id/evidencias/:evidencia {tipoFonte}`, `TIPOS_FONTE`): `oficial`
+- **Evidence strength** by source type (`PATCH /:id/evidencias/:evidencia {tipoFonte}`, `SOURCE_TYPES`): `oficial`
   (official document, strong), `primaria` (primary source, medium), `materia` (another news story, medium), `anonima`
   (anonymous source, weak). The address suggests a type (government and court domains, official gazettes) and the
   person confirms. Strength never depends on the political leaning of a publisher.
@@ -92,8 +96,8 @@ These run without any model call (`src/lib/apuracao.ts`, `src/lib/assistente.ts`
 
 ## Blue-pencil reviewer
 
-The question an experienced editor would write in the margin of each paragraph (`src/lib/revisor.ts`,
-`web/src/materia/Revisor.tsx`). The questions are fixed in code and never come from a model, so they cost nothing,
+The question an experienced editor would write in the margin of each paragraph (`src/lib/reviewer.ts`,
+`web/src/story/Reviewer.tsx`). The questions are fixed in code and never come from a model, so they cost nothing,
 cannot hallucinate and are the same for anyone cited.
 
 - At most **one note per paragraph**: the most serious open mark, in this order: victim or minor ("Does the name need
@@ -107,25 +111,25 @@ cannot hallucinate and are the same for anyone cited.
 
 ## Writing desk
 
-The **Writing desk** (`web/src/materia/Bancada.tsx`) groups helpers for writing and releasing the story, one panel open
+The **Writing desk** (`web/src/story/Bench.tsx`) groups helpers for writing and releasing the story, one panel open
 at a time (`?ferramenta=`). Nothing a model produces here enters the document automatically.
 
 | Panel | What it does |
 |---|---|
 | **Interview quotes** | Search the transcripts of the story's recordings and insert a passage of speech into the text. |
 | **Sponsor** | Insert a sponsorship note from the outlet's sponsorships, at the person's request. |
-| **Promote** | Suggests three email subjects and a WhatsApp message (`POST /:id/divulgacao`, `src/lib/escrita.ts`). A suggestion containing a number that is not in the text is discarded. The person copies what they want. |
+| **Promote** | Suggests three email subjects and a WhatsApp message (`POST /:id/divulgacao`, `src/lib/writing.ts`). A suggestion containing a number that is not in the text is discarded. The person copies what they want. |
 | **Second read** | Up to six notes from a model acting as an editor: opening, unanswered question, what could go, clarity (`POST /:id/segunda-leitura`). Each points to a passage; the person decides. |
 | **Versions** | Shows earlier versions of the text and restores one (`GET /:id/historico`, `GET /:id/historico/:retrato`). The current text is kept and can come back. |
 
 ## Source material
 
-**Material** is the source organizer next to the text (`src/lib/material.ts`, `src/lib/recorte.ts`,
-`web/src/materia/Material.tsx`). On desktop it is a column to the left of the page; on mobile, a bottom sheet. No
+**Material** is the source organizer next to the text (`src/lib/material.ts`, `src/lib/clipping.ts`,
+`web/src/story/Material.tsx`). On desktop it is a column to the left of the page; on mobile, a bottom sheet. No
 model is involved.
 
 - **Clippings** (`GET`/`POST /:id/recortes`, `PATCH`/`DELETE /:id/recortes/:recorte`): a literal passage from a source
-  (evidence, document page or recording) or a note of your own (`ORIGENS_RECORTE`). The server checks the passage is
+  (evidence, document page or recording) or a note of your own (`ORIGINS_CLIPPING`). The server checks the passage is
   literally in the source. Up to 200 clippings per text, passages up to 2,000 characters, notes up to 500.
 - **Reader**: the stored text of each source, readable next to the draft (`GET /:id/evidencias/:evidencia/texto`,
   `GET /:id/documentos/:arquivo/paginas`).
@@ -133,7 +137,7 @@ model is involved.
 - **Insert** puts the passage in the text as it is, with a citation note when the source is citable. **Save** and
   **Insert** keep the selection in the source and the cursor in the text where they were.
 - **Archive** (`GET /acervo`, `POST /:id/acervo/trazer`): the outlet's saved sources and clippings from other stories,
-  brought in without fetching, reading or transcribing again (`TIPOS_TRAZER`: `link`, `documento`, `gravacao`,
+  brought in without fetching, reading or transcribing again (`BRING_TYPES`: `link`, `documento`, `gravacao`,
   `recorte`).
 
 ## Editor shortcuts
@@ -174,12 +178,12 @@ the evidence passage and its link. The caption's call to action links to the aut
 
 ## Second opinion and topic routing
 
-With an Anthropic key (server `ANTHROPIC_API_KEY` or the outlet's own key), `src/lib/segunda.ts` adds two safeguards:
+With an Anthropic key (server `ANTHROPIC_API_KEY` or the outlet's own key), `src/lib/secondOpinion.ts` adds two safeguards:
 
 1. A paragraph with a risk, or with accusation vocabulary, is also checked by Claude. If the two opinions disagree the
    mark becomes **uncertain, check it**, which counts as an open risk in the checklist.
 2. Texts on topics that some models are known to soften (Taiwan, Xinjiang, Tibet, Tiananmen, the Chinese government and
-   related terms, `TEMA_SENSIVEL` in `src/lib/apuracao.ts`) are checked entirely by Claude.
+   related terms, `TOPIC_SENSITIVE` in `src/lib/reporting.ts`) are checked entirely by Claude.
 
 The card says how many opinions there were. Without the key, the screen says the mark had a single opinion. If the
 second opinion is unavailable, the paragraph is checked with a warning; a refusal leaves it **not checked** with the

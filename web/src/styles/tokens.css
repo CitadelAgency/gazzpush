@@ -1,0 +1,371 @@
+/* Blue pencil tokens (DESIGN.md §2 and §3). A single source: change things here, never in a per-screen CSS.
+   Tailwind's default palette goes out entirely (--color-*: initial): only colours with a meaning exist. */
+@import "tailwindcss" source("..");
+
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 400; font-display: swap; src: url(./fonts/atkinson-hyperlegible-next-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 700; font-display: swap; src: url(./fonts/atkinson-hyperlegible-next-latin-700-normal.woff2) format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 500; font-display: swap; src: url(./fonts/atkinson-hyperlegible-next-latin-500-normal.woff2) format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 600; font-display: swap; src: url(./fonts/atkinson-hyperlegible-next-latin-600-normal.woff2) format("woff2"); }
+/* Unslashed zero (DESIGN.md §3): only the digit 0 comes from these files, made from Atkinson itself by design/rodada-4/zero.py.
+   They come after the full faces and with unicode-range: they win only at U+30. The mono keeps the slashed zero. */
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 400; font-display: swap; src: url(./fonts/zero-400.woff2) format("woff2"); unicode-range: U+30; }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 500; font-display: swap; src: url(./fonts/zero-500.woff2) format("woff2"); unicode-range: U+30; }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 600; font-display: swap; src: url(./fonts/zero-600.woff2) format("woff2"); unicode-range: U+30; }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 700; font-display: swap; src: url(./fonts/zero-700.woff2) format("woff2"); unicode-range: U+30; }
+@font-face { font-family: "Fragment Mono"; font-weight: 400; font-display: swap; src: url(./fonts/fragment-mono-latin-400-normal.woff2) format("woff2"); }
+
+@theme {
+  --color-*: initial;
+  --color-papel: #F7F9FA;
+  --color-papel-2: #EAEEF1;
+  --color-papel-3: #E0E5E9;          /* one step below papel-2: field and strip on hover */
+  --color-mesa: #E7ECEF;             /* the desk: the sidebar and the frame around the sheet (round 4) */
+  --color-aperto: #C8CDD1;           /* a pressed sidebar row: one tone below hover */
+  --color-realce-arte: #9BE3B9;      /* the pointed sentence, over the art (which is always dark underneath) */
+  --color-sobre-realce: #0E2A1B;
+  --color-branco: #FFFFFF;
+  --color-texto: #2A2D33;
+  --color-texto-forte: #15171B;
+  --color-apoio: #5A5E66;
+  --color-fio: rgb(21 23 27 / .11);
+  --color-fio-forte: rgb(21 23 27 / .22);
+  --color-tinta: #0B5CC4;            /* blue pencil: actions only */
+  --color-tinta-forte: #0A53B2;      /* the blue-pencil block with the pointer over it */
+  --color-sobre-tinta: #FFFFFF;      /* the text over the ink (at night the ink lightens and the text darkens) */
+  --color-tinta-clara: #E4EEFB;
+  --color-verde: #17663F;            /* validation ok only */
+  --color-verde-claro: #E0F0E6;
+  --color-ambar: #6E4A00;            /* warning only */
+  --color-ambar-claro: #F8EDCF;
+  --color-terracota: #A23E1C;        /* error and rejection only */
+  --color-terracota-claro: #F9E2D7;
+
+  --font-*: initial;
+  --font-sans: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --font-mono: "Fragment Mono", ui-monospace, monospace;
+
+  --radius-*: initial;
+  --radius-card: 4px;
+  --radius-faixa: 6px;
+  --radius-btn: 8px;
+  --radius-full: 999px;
+
+  /* Paper on the desk: each elevation is a 1 px ring (the rule), a contact shadow and a long, soft shadow.
+     curta = card at rest; eleva = raised card (hover, focus, chosen); prova = the piece's art, which is the product. */
+  --shadow-*: initial;
+  --shadow-fio: 0 1px 0 var(--color-fio-forte);
+  --shadow-curta: 0 0 0 1px rgb(21 23 27 / .05), 0 1px 1px rgb(21 23 27 / .05), 0 3px 6px -2px rgb(21 23 27 / .07), 0 14px 22px -14px rgb(21 23 27 / .2);
+  --shadow-eleva: 0 0 0 1px rgb(21 23 27 / .07), 0 2px 3px rgb(21 23 27 / .06), 0 10px 18px -6px rgb(21 23 27 / .14), 0 28px 40px -22px rgb(21 23 27 / .34);
+  --shadow-prova: 0 0 0 1px rgb(21 23 27 / .1), 0 1px 2px rgb(21 23 27 / .1), 0 6px 10px -4px rgb(21 23 27 / .16), 0 22px 34px -14px rgb(21 23 27 / .3);
+  --shadow-folha: 0 0 0 1px rgb(21 23 27 / .06), 0 1px 2px rgb(21 23 27 / .05), 0 12px 28px -18px rgb(21 23 27 / .28);
+
+  /* Motion: ease-out for entrances, a short spring for what responds to touch. */
+  --ease-saida: cubic-bezier(.2, .8, .2, 1);
+  --ease-mola: linear(0, .1 4%, .42 11%, .8 19%, 1.05 27%, 1.13 33%, 1.09 39%, 1.01 49%, .98 58%, 1 72%, 1);
+  --ease-gaveta: cubic-bezier(.32, .72, 0, 1);   /* what travels or slides on screen: leaves fast, settles slowly */
+
+  --breakpoint-*: initial;
+  --breakpoint-sm: 600px;
+  --breakpoint-lg: 1024px;   /* a 256 px sidebar from here on */
+  --breakpoint-xl: 1180px;   /* two columns with the 420 px column (Review and Publish): below this, it stacks */
+}
+
+/* Night (DESIGN.md §12): the desk darkens and the paper follows. It only turns on from the account menu
+   (web/src/theme.ts sets data-mesa="noite" on <html>), never by itself: the identity is paper. The sheets' white
+   becomes light graphite, and the ink lightens: so the text on it has its own token (--color-sobre-tinta). */
+:root[data-mesa="noite"] {
+  color-scheme: dark;
+  --color-mesa: #0D0F12; --color-papel: #16181C; --color-papel-2: #1F2227; --color-papel-3: #2A2E35; --color-branco: #1C1F24; --color-aperto: #343941;
+  --color-texto: #C5CAD1; --color-texto-forte: #F1F3F6; --color-apoio: #949BA6;
+  --color-fio: rgb(255 255 255 / .09); --color-fio-forte: rgb(255 255 255 / .2);
+  --color-tinta: #7FB2FF; --color-tinta-forte: #9CC4FF; --color-tinta-clara: #15294B; --color-sobre-tinta: #0A1B38;
+  --color-verde: #6CC797; --color-verde-claro: #12301F;
+  --color-ambar: #E8BD55; --color-ambar-claro: #33280B;
+  --color-terracota: #F29373; --color-terracota-claro: #3B1C11;
+  --shadow-fio: 0 1px 0 var(--color-fio-forte);
+  --shadow-curta: 0 0 0 1px rgb(255 255 255 / .07), 0 1px 1px rgb(0 0 0 / .4), 0 10px 18px -12px rgb(0 0 0 / .7);
+  --shadow-eleva: 0 0 0 1px rgb(255 255 255 / .1), 0 2px 4px rgb(0 0 0 / .4), 0 18px 34px -14px rgb(0 0 0 / .8);
+  --shadow-prova: 0 0 0 1px rgb(255 255 255 / .1), 0 2px 4px rgb(0 0 0 / .5), 0 22px 34px -14px rgb(0 0 0 / .8);
+  --shadow-folha: 0 0 0 1px rgb(255 255 255 / .07), 0 12px 28px -18px rgb(0 0 0 / .8);
+  --textura-papel: linear-gradient(rgb(127 178 255 / .035) 1px, transparent 1px), linear-gradient(90deg, rgb(127 178 255 / .035) 1px, transparent 1px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .08 0 0 0 0 .1 0 0 0 0 .14 0 0 0 .17 -.058'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+/* The sheet's edge and the blue-pencil block have hand-written shadows: at night, the light version. */
+:root[data-mesa="noite"] .moldura { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .07), 0 0 0 100vmax var(--color-mesa); }
+:root[data-mesa="noite"] .btn-tinta { box-shadow: inset 0 1px 0 rgb(255 255 255 / .25), 0 1px 2px rgb(0 0 0 / .5), 0 8px 14px -8px rgb(127 178 255 / .45); }
+
+@layer base {
+  /* The paper: the review grid over the grain. In a variable because the shell's sheet (round 4) uses the same. */
+  :root {
+    --textura-papel: linear-gradient(rgb(11 92 196 / .03) 1px, transparent 1px), linear-gradient(90deg, rgb(11 92 196 / .03) 1px, transparent 1px),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .08 0 0 0 0 .1 0 0 0 0 .14 0 0 0 .17 -.058'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E");
+    --topo: 0px; --pe: 0px;   /* what the shell pins at the top and bottom (folio, frame): whoever uses sticky adds this */
+  }
+  html { -webkit-text-size-adjust: 100%; color-scheme: light; scrollbar-width: thin; scrollbar-color: var(--color-fio-forte) transparent; scrollbar-gutter: stable; -webkit-tap-highlight-color: transparent; }
+  /* Press (DESIGN.md §12): every button responds at once, shrinking a little. It is the `scale` property, which adds to
+     each one's transform. A list row (data-linha) does not shrink: it darkens a tone, in its own rule. */
+  :where(button, [role="button"]) { touch-action: manipulation; transition: scale 140ms var(--ease-saida); }
+  :where(a) { touch-action: manipulation; }
+  :where(button, [role="button"]):where(:not([data-linha], :disabled)):active { scale: .97; }
+  body {
+    margin: 0; background-color: var(--color-papel); color: var(--color-texto);
+    font: 400 16px/1.5 var(--font-sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    /* Real paper: fine grain (about 3% ink) underneath and, on top, the review grid (32 px, blue at 3%, never stronger).
+       The grain is paper's, not a brush's: it has no colour or direction. */
+    background-image: var(--textura-papel);
+    background-size: 32px 32px, 32px 32px, 220px 220px;
+  }
+  /* Tables and counts align on the digit; titles and paragraphs wrap without widows. */
+  :where(.mono, .num, time, b, table) { font-variant-numeric: tabular-nums; }
+  p { text-wrap: pretty; }
+  h1, h2, h3 { color: var(--color-texto-forte); text-wrap: balance; }
+  ::selection { background: var(--color-tinta-clara); color: var(--color-texto-forte); }
+  :focus-visible { outline: 2px solid var(--color-texto-forte); outline-offset: 3px; border-radius: 4px; }
+  input, select, textarea, button { font: inherit; }
+  /* A thin, neutral scrollbar in the areas that scroll (the sidebar, the sheets, the card strips). */
+  :where(aside, dialog, ul, ol, div, section) { scrollbar-width: thin; scrollbar-color: var(--color-fio-forte) transparent; }
+  :where(input, textarea)::placeholder { color: var(--color-apoio); opacity: 1; }
+  :where(input, textarea) { caret-color: var(--color-tinta); }
+}
+
+@layer components {
+  /* Short metadata (section, time, count). Normal case; .secao is the only upper case. */
+  .mono { font-family: var(--font-mono); font-size: 12px; letter-spacing: .01em; line-height: 1.45; }
+  .secao {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding-top: 16px; border-top: 2px solid var(--color-texto-forte); color: var(--color-texto-forte);
+    font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .titulo-tela { font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+  .manchete { font-weight: 700; letter-spacing: -.015em; line-height: 1.15; }
+
+  /* The blue-pencil block: the form action (Sign in, Create outlet). White on ink: 6.3:1. It has body: a 1 px highlight
+     on top and a blue shadow underneath, like a real block of ink; it sinks 1 px on press. */
+  .btn-tinta {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px;
+    border-radius: var(--radius-btn); background: var(--color-tinta); color: var(--color-sobre-tinta); font-weight: 700; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .18), 0 1px 2px rgb(8 48 112 / .45), 0 8px 14px -8px rgb(11 92 196 / .6);
+    transition: background-color 140ms, box-shadow 140ms, transform 160ms var(--ease-saida), scale 140ms var(--ease-saida);
+  }
+  @media (hover: hover) { .btn-tinta:hover:not(:disabled) { background: var(--color-tinta-forte); box-shadow: inset 0 1px 0 rgb(255 255 255 / .18), 0 1px 2px rgb(8 48 112 / .5), 0 12px 18px -8px rgb(11 92 196 / .7); } }
+  .btn-tinta:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 1px 3px rgb(0 20 60 / .35); }
+  .btn-tinta:disabled { opacity: .55; cursor: progress; box-shadow: none; }
+  .btn-sec:disabled, .acao-lapis:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-sec {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px;
+    border-radius: var(--radius-btn); color: var(--color-texto-forte); font-weight: 700; cursor: pointer;
+    transition: background-color 120ms, box-shadow 120ms, transform 160ms var(--ease-saida), scale 140ms var(--ease-saida);
+  }
+  @media (hover: hover) { .btn-sec:hover { background: var(--color-papel-2); } }
+  .btn-sec:active { transform: translateY(1px); }
+  .link-acao { color: var(--color-tinta); font-weight: 700; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--color-tinta) 40%, transparent); text-underline-offset: 3px; cursor: pointer; transition: text-decoration-color 120ms; }
+  @media (hover: hover) { .link-acao:hover { text-decoration-color: var(--color-tinta); } }
+
+  /* Field: no outline; a toned background and a rule underneath (DESIGN.md §6.4). On focus, the paper lightens and the rule thickens. */
+  .campo { display: grid; gap: 6px; }
+  .campo > span:first-child { font-weight: 700; color: var(--color-texto-forte); font-size: 15px; }
+  .entrada {
+    width: 100%; min-height: 48px; padding: 10px 12px; border: 0; border-radius: var(--radius-btn) var(--radius-btn) 0 0;
+    background: var(--color-papel-2); color: var(--color-texto-forte); box-shadow: inset 0 -1px 0 var(--color-fio-forte);
+    transition: background-color 140ms, box-shadow 140ms;
+  }
+  @media (hover: hover) { .entrada:hover:not(:focus) { background: var(--color-papel-3); } }
+  .entrada:focus { outline: none; background: var(--color-branco); box-shadow: inset 0 -2px 0 var(--color-texto-forte), 0 6px 14px -10px rgb(21 23 27 / .5); }
+  .entrada:focus-visible { outline: 2px solid var(--color-texto-forte); outline-offset: 2px; }
+  .entrada[aria-invalid="true"] { box-shadow: inset 0 -2px 0 var(--color-terracota); }
+  .ajuda { font-size: 14px; color: var(--color-apoio); line-height: 1.4; }
+
+  /* State strips (a colour with a single meaning). */
+  .faixa-erro { padding: 10px 12px; border-radius: var(--radius-faixa); background: var(--color-terracota-claro); color: var(--color-terracota); font-size: 15px; }
+  .faixa-aviso { padding: 10px 12px; border-radius: var(--radius-faixa); background: var(--color-ambar-claro); color: var(--color-ambar); font-size: 15px; }
+
+  /* Loading skeleton: the screen's same grid, in papel-2 tone, with a sheen that sweeps from left to right. */
+  .esqueleto { background: var(--color-papel-2); border-radius: var(--radius-card); }
+  @media (prefers-reduced-motion: no-preference) {
+    .esqueleto {
+      background-image: linear-gradient(100deg, transparent 25%, rgb(255 255 255 / .7) 50%, transparent 75%); background-repeat: no-repeat;
+      background-size: 240% 100%; background-position: 170% 0; animation: esqueleto 1.6s ease-in-out infinite;
+    }
+  }
+  @keyframes esqueleto { to { background-position: -70% 0; } }
+
+  /* An action with a pencil loop (the screen's hand mark). The stroke passes behind the text. */
+  .acao-lapis { position: relative; display: inline-block; padding: 10px 18px; color: var(--color-tinta); font-weight: 700; text-decoration: none; }
+  .acao-lapis > span { position: relative; z-index: 1; }
+}
+
+/* Screen change (View Transitions, on the shell's and lists' links): the paper leaves and the new one enters, briefly.
+   Only the content area moves; bar, sidebar and navigation stay still. With reduced motion, a hard swap. */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+#miolo { view-transition-name: conteudo; }
+/* The old screen leaves before the new one enters (almost without overlap): two half-transparent screens together look like a defect. */
+::view-transition-old(conteudo) { animation: 90ms ease-out both troca-sai; }
+::view-transition-new(conteudo) { animation: 180ms var(--ease-saida) 70ms both troca-entra; }
+/* The proof's art travels from the desk to the stage (and back): the clicked one and the stage's share the same name. */
+::view-transition-group(arte) { animation-duration: 300ms; animation-timing-function: var(--ease-gaveta); }
+/* What comes from the keyboard does not animate (DESIGN.md §12): shortcuts, the palette and Enter repeat all day. The
+   html carries data-tecla while the last action came from the keyboard (web/src/motion.ts). */
+html[data-tecla]::view-transition-group(*), html[data-tecla]::view-transition-old(*), html[data-tecla]::view-transition-new(*) { animation: none !important; }
+html[data-tecla] :is(.entra, .folha[open], .menu[data-state], .carimbo-bate) { animation: none !important; }
+@keyframes troca-sai { to { opacity: 0; } }
+@keyframes troca-entra { from { opacity: 0; transform: translateY(6px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Less motion, not zero: colour and opacity keep signalling; what moves, rotates or grows stops. */
+  *, *::before, *::after { transition-property: opacity, color, background-color, border-color, box-shadow, text-decoration-color !important; scroll-behavior: auto !important; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  .entra, .menu[data-state] { animation: none !important; }
+}
+
+@layer components {
+  /* Dropdown menu (outlet picker, account): paper, layered shadow, no outline; opens from the trigger. */
+  .menu {
+    z-index: 50; min-width: 248px; max-width: calc(100vw - 24px); padding: 4px; border-radius: 10px;
+    background: var(--color-papel); box-shadow: var(--shadow-eleva); transform-origin: var(--radix-dropdown-menu-content-transform-origin, top left);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .menu[data-state="open"] { animation: menu-abre 160ms var(--ease-saida); }
+  }
+  @keyframes menu-abre { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+  .menu-item {
+    display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border-radius: var(--radius-faixa);
+    cursor: pointer; outline: none; user-select: none; transition: background-color 90ms;
+  }
+  .menu-item[data-highlighted] { background: var(--color-papel-2); }
+  /* With a mouse the menu is denser; on touch, the row stays at 44 px. */
+  @media (hover: hover) and (pointer: fine) { .menu-item { min-height: 36px; padding-block: 6px; } }
+
+  /* List entrance: rises 10 px and appears, in a stair (--i = position). Only elements that were just born animate;
+     whatever was already on screen does not repeat when the list refreshes. */
+  /* "backwards": holds the first frame during the delay and lets go at the end, without pinning the transform (the card's hover
+     still controls it). */
+  .entra { animation: entra 260ms var(--ease-saida) backwards; animation-delay: calc(var(--i, 0) * 30ms); }
+  @keyframes entra { from { opacity: 0; transform: translateY(6px); } }
+
+  /* Tooltip (web/src/tooltip.ts): the name of an icon-only button, with its shortcut. The first one waits; with a tooltip
+     already in view, the neighbour opens at once. It grows from the button (transform-origin) and is never the only place for a piece of information. */
+  .dica {
+    position: fixed; left: 0; top: 0; z-index: 80; display: flex; align-items: center; gap: 8px; max-width: 280px; padding: 5px 8px; border-radius: 6px;
+    background: var(--color-texto-forte); color: var(--color-papel); font-size: 12.5px; font-weight: 500; line-height: 1.3; pointer-events: none; box-shadow: var(--shadow-curta);
+    opacity: 0; transform: scale(.97); transform-origin: var(--origem, center bottom); transition: opacity 125ms ease-out, transform 125ms ease-out;
+  }
+  .dica[data-on] { opacity: 1; transform: none; }
+  .dica[data-seco] { transition-duration: 0ms; }
+  .dica .kbd { background: transparent; color: inherit; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-papel) 35%, transparent); }
+
+  /* A keyboard shortcut, like a real key: ⌘K, A, R, ←. */
+  .kbd {
+    display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 5px;
+    background: var(--color-branco); color: var(--color-apoio); font: 400 12px/1 var(--font-mono);
+    box-shadow: 0 0 0 1px var(--color-fio-forte), 0 1px 0 var(--color-fio-forte);
+  }
+
+  /* Crop marks: four corners outside the art, as on a print proof. The parent has position: relative; the marks sit 6
+     px from the art and measure 9 px. Decoration only: no role at all for screen readers. */
+  .corte { position: relative; --corte-cor: color-mix(in srgb, var(--color-texto-forte) 50%, transparent); --corte-fora: 14px; --corte-lado: 9px; }
+  .corte::after {
+    content: ""; position: absolute; inset: calc(var(--corte-fora) * -1); pointer-events: none;
+    background:
+      linear-gradient(var(--corte-cor), var(--corte-cor)) 0 var(--corte-fora) / var(--corte-lado) 1px,
+      linear-gradient(var(--corte-cor), var(--corte-cor)) var(--corte-fora) 0 / 1px var(--corte-lado),
+      linear-gradient(var(--corte-cor), var(--corte-cor)) 100% var(--corte-fora) / var(--corte-lado) 1px,
+      linear-gradient(var(--corte-cor), var(--corte-cor)) calc(100% - var(--corte-fora)) 0 / 1px var(--corte-lado),
+      linear-gradient(var(--corte-cor), var(--corte-cor)) 0 calc(100% - var(--corte-fora)) / var(--corte-lado) 1px,
+      linear-gradient(var(--corte-cor), var(--corte-cor)) var(--corte-fora) 100% / 1px var(--corte-lado),
+      linear-gradient(var(--corte-cor), var(--corte-cor)) 100% calc(100% - var(--corte-fora)) / var(--corte-lado) 1px,
+      linear-gradient(var(--corte-cor), var(--corte-cor)) calc(100% - var(--corte-fora)) 100% / 1px var(--corte-lado);
+    background-repeat: no-repeat;
+  }
+
+  /* A print-shop stamp: a proof's state, in mono and upper case, slightly crooked, in graphite (a stamp is not an action,
+     so it is not blue; it is not validation, so it is not green). */
+  .carimbo {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 2px; border: 1.5px solid currentColor; border-radius: 3px;
+    color: color-mix(in srgb, var(--color-texto-forte) 78%, transparent); font: 400 11px/1.25 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap;
+    transform: rotate(-2.2deg); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .6);
+  }
+  /* The closed proof: the same stamp, at the size of whoever signs the page. */
+  .carimbo-prova { padding: 4px 9px 3px; border-width: 2px; font-size: 12px; letter-spacing: .1em; }
+}
+
+@layer components {
+  /* Sheet (native dialog): on mobile, a strip of paper rising from the bottom; on desktop, at the top and centred. No
+     outline: a long shadow and a dimmed background behind. */
+  .folha {
+    margin: auto auto 0; width: 100%; max-width: 100%; max-height: min(92dvh, 760px); padding: 0; border: 0; overflow: auto;
+    border-radius: 8px 8px 0 0; background: var(--color-papel); color: var(--color-texto);
+    box-shadow: 0 -1px 0 var(--color-fio-forte), 0 -18px 40px -16px rgb(21 23 27 / .35);
+  }
+  .folha::backdrop { background: rgb(21 23 27 / .32); }
+  @media (min-width: 1024px) {
+    .folha { margin: 12vh auto auto; width: 560px; border-radius: 12px; box-shadow: var(--shadow-eleva), 0 40px 80px -30px rgb(21 23 27 / .5); }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .folha[open] { animation: folha-sobe 200ms ease-out; }
+  }
+  @keyframes folha-sobe { from { opacity: 0; transform: translateY(16px); } }
+}
+
+/* The Story editor (Tiptap): the white, plain sheet, text at 18/19 px with 1.75 leading in a 680 px column,
+   subheading, quotes by indent and rule (no card), and the check's marks as a layer (DESIGN §5, The three marks). */
+@layer components {
+  .folha-doc { --margem: 20px; margin-inline: -20px; background: var(--color-branco); }
+  .folha-doc-barra { position: sticky; top: 58px; z-index: 5; padding: 6px var(--margem); background: var(--color-branco); border-bottom: 1px solid var(--color-fio); }
+  .folha-doc:focus-within .folha-doc-barra { border-bottom-color: var(--color-texto-forte); }
+  .folha-doc .editor-materia { padding: 28px var(--margem) 12px; }
+  /* The footer stays pinned to the bottom of the screen, like Docs' bottom bar: count and status in view, without landing on the text. */
+  .folha-doc-pe { position: sticky; bottom: calc(66px + env(safe-area-inset-bottom)); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 16px; padding: 4px var(--margem); background: var(--color-branco); border-top: 1px solid var(--color-fio); }
+  @media (min-width: 1024px) {
+    .folha-doc { --margem: 40px; margin-inline: 0; border-radius: var(--radius-card); box-shadow: var(--shadow-curta); }
+    .folha-doc-barra { top: var(--topo); padding-inline: 16px; }
+    .folha-doc .editor-materia { padding-top: 44px; }
+    .folha-doc-pe { bottom: var(--pe); border-radius: 0 0 var(--radius-card) var(--radius-card); }
+    /* Focus and Material alongside: the sheet (and the material column) take the sidebar's width. */
+    html[data-sem-lateral] [data-lateral] { display: none !important; }
+    html[data-sem-lateral] [data-casca] { padding-left: 0 !important; }
+  }
+  @media (min-width: 1440px) { .folha-doc { --margem: 56px; } }
+  .editor-materia .ProseMirror { outline: none; max-width: 680px; min-height: 60vh; margin-inline: auto; font-size: 18px; line-height: 1.75; color: var(--color-texto); white-space: pre-wrap; }
+  @media (min-width: 1024px) { .editor-materia .ProseMirror { font-size: 19px; } }
+  /* The blank sheet says what to do (the empty paragraph has only ProseMirror's break). */
+  .editor-materia .ProseMirror:has(> p:only-child > br:only-child)::before { content: attr(data-vazio); float: left; height: 0; color: var(--color-apoio); pointer-events: none; }
+  /* :where so the space between paragraphs applies: with `p` in the selector, the zero margin won and the text came stuck together. */
+  .editor-materia .ProseMirror :where(p) { margin: 0; }
+  .editor-materia .ProseMirror > * + * { margin-top: 1.1em; }
+  .editor-materia .imagem-texto { display: block; max-width: 100%; height: auto; }
+  .editor-materia .apoio-texto { padding: 10px 14px; background: var(--color-papel-2); color: var(--color-apoio); font-size: 15px; line-height: 1.5; }
+  .editor-materia .ProseMirror-selectednode { outline: 2px solid var(--color-texto-forte); outline-offset: 2px; }
+  .editor-materia .ProseMirror h2 { margin: 1.5rem 0 0; font-size: 22px; line-height: 1.3; }
+  .editor-materia .ProseMirror blockquote { margin: 0; padding-left: 1rem; box-shadow: inset 2px 0 0 var(--color-fio-forte); color: var(--color-texto-forte); }
+  .editor-materia .ProseMirror a { color: var(--color-tinta); text-decoration: underline; text-underline-offset: 3px; }
+  .marca-ed { border-radius: 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer; }
+  .marca-ativa { outline: 2px solid var(--color-texto-forte); outline-offset: 1px; }
+
+  /* The reviewer (DESIGN.md §10). The note asks for something, so it is action blue; only it uses the pencil inside the sheet. */
+  .nota-revisor { display: inline-block; max-width: 100%; color: var(--color-tinta); font: 600 15px/1.35 var(--font-sans); text-align: left; }
+  .nota-revisor-texto { position: relative; display: inline-block; margin-bottom: 7px; }
+  .nota-botao { display: block; min-height: 44px; padding: 6px 0 2px; border: 0; background: transparent; cursor: pointer; }
+  .nota-bloco { user-select: none; }
+  .editor-materia .ProseMirror > .nota-bloco { margin-top: .15em; }
+  .nota-sai { display: grid; grid-template-rows: 1fr; }
+  .nota-sai-miolo { min-height: 0; overflow: hidden; padding: 6px 0 2px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .nota-nasce .nota-revisor-texto { animation: nota-revela 300ms var(--ease-saida) both; }
+    /* --nota-saida-atraso + the duration = RISCA_MS in Reviewer.tsx. */
+    .nota-sai { animation: nota-sai 240ms ease-out var(--nota-saida-atraso, 660ms) forwards; }
+    .marca-acende { animation: marca-acende 1500ms ease-out calc(var(--acende-ordem, 0) * 220ms); }
+  }
+  @keyframes nota-revela { from { clip-path: inset(-4px 100% -10px 0); } to { clip-path: inset(-4px -6px -10px 0); } }
+  @keyframes nota-sai { to { grid-template-rows: 0fr; opacity: 0; } }
+  @keyframes marca-acende { 0%, 30% { background-color: var(--color-verde-claro); } 100% { background-color: transparent; } }
+  .marca-icone { cursor: pointer; user-select: none; }
+  /* Dossier citation (@): the source's label in mono, next to the sentence; it is the person's text. */
+  .nota-ed { font-family: var(--font-mono); font-size: .78em; color: var(--color-texto-forte); background: var(--color-papel-2); padding: 0 .25em; border-radius: 2px; white-space: nowrap; }
+  .nota-ed.ProseMirror-selectednode { outline: 2px solid var(--color-texto-forte); }
+  /* Ctrl/⌘K palette: at the top of the screen, paper and a short shadow, like the sheets. */
+  .comandos {
+    margin: 10vh auto auto; width: min(520px, calc(100% - 24px)); max-height: 70dvh; padding: 0; border: 0; overflow: auto;
+    border-radius: 8px; background: var(--color-papel); color: var(--color-texto); box-shadow: 0 1px 3px rgb(21 23 27 / .14), 0 24px 56px -20px rgb(21 23 27 / .4);
+  }
+  .comandos::backdrop { background: rgb(21 23 27 / .32); }
+}

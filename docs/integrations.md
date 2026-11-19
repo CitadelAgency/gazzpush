@@ -55,7 +55,7 @@ Without this setup, the request is copied and sent by the reporter, who records 
 ## Stripe
 
 Only for operators who run Gazzpush as a paid service. Leave `INSTALACAO_PROPRIA` unset, so new outlets start on the
-`teste` plan and must subscribe before producing. Plans, prices and quotas are defined in `src/lib/planosTabela.ts`;
+`teste` plan and must subscribe before producing. Plans, prices and quotas are defined in `src/lib/plansTable.ts`;
 the amount actually charged is the Stripe price.
 
 1. In Stripe, create a product with two monthly prices and enable the Customer Portal.

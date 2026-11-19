@@ -9,8 +9,8 @@ Third-party components
 ----------------------
 
 Fonts bundled in this repository are licensed under the SIL Open Font License 1.1. Each font ships
-with its license file next to it (assets/fonts/*-OFL.txt, web/src/estilo/fontes/OFL-*.txt). The
-"zero" font files in web/src/estilo/fontes/ are derived from Atkinson Hyperlegible Next.
+with its license file next to it (assets/fonts/*-OFL.txt, web/src/styles/fonts/OFL-*.txt). The
+"zero" font files in web/src/styles/fonts/ are derived from Atkinson Hyperlegible Next.
 
 npm dependencies are not included in this repository; their licenses are listed in each package.
 

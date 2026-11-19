@@ -22,4 +22,4 @@ body:
     id: who
     attributes:
       label: Who would use it
-      placeholder: e.g. investigative reporters, local newsrooms, fact-checkers, editors
+      placeholder: e.g. investigative reporters, freelance journalists, local newsrooms, editors

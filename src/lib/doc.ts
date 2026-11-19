@@ -1,79 +1,79 @@
-// Documento do editor da Matéria (ProseMirror/Tiptap) em JSON, comum ao Worker e à tela. Só o que o editor permite:
-// parágrafo, intertítulo (h2), citação (blockquote com parágrafos), negrito, itálico, link, imagem e o bloco de apoio
-// (patrocínio). Imagem e apoio ficam fora da conferência: não são afirmação do texto. Cada bloco de texto
-// (parágrafo ou intertítulo) tem um id estável em `attrs.id`: as afirmações se prendem ao bloco e à posição dentro
-// dele, e a conferência é por bloco (só o que mudou é conferido de novo). Sem dependência de Worker nem de DOM.
+// The Story editor's document (ProseMirror/Tiptap) as JSON, shared by the Worker and the screen. Only what the editor
+// allows: paragraph, subheading (h2), quote (blockquote with paragraphs), bold, italic, link, image and the support
+// block (sponsorship). Images and support blocks stay out of the check: they are not claims of the text. Each text block
+// (paragraph or subheading) has a stable id in `attrs.id`: claims are tied to the block and to the position inside it,
+// and the check runs per block (only what changed is checked again). No Worker or DOM dependency.
 
-export interface Marca { type: string; attrs?: Record<string, unknown> }
-export interface No { type: string; attrs?: Record<string, unknown>; content?: No[]; text?: string; marks?: Marca[] }
-export type TipoBloco = 'paragrafo' | 'intertitulo' | 'citacao';
-export interface Bloco { id: string; tipo: TipoBloco; texto: string }
+export interface Brand { type: string; attrs?: Record<string, unknown> }
+export interface In { type: string; attrs?: Record<string, unknown>; content?: In[]; text?: string; marks?: Brand[] }
+export type BlockType = 'paragrafo' | 'intertitulo' | 'citacao';
+export interface Block { id: string; tipo: BlockType; texto: string }
 
-export const BLOCOS_MAX = 2_000;
-export const DOC_MAX = 400_000;             // caracteres do JSON (o corpo tem teto de 100 mil; a estrutura cabe folgada)
+export const BLOCKS_MAX = 2_000;
+export const DOC_MAX = 400_000;             // characters of JSON (the body is capped at 100k; the structure fits easily)
 const ID_OK = /^[A-Za-z0-9_-]{1,40}$/;
 
-/** Texto de um bloco como a conferência vê: os textos na ordem; a quebra de linha vira espaço; a nota, o rótulo dela. */
-export function textoDoNo(no: No): string {
-  if (no.type === 'text') return no.text ?? '';
-  if (no.type === 'hardBreak') return ' ';
-  if (no.type === 'nota') return String(no.attrs?.rotulo ?? '');
-  return (no.content ?? []).map(textoDoNo).join('');
+/** A block's text as the check sees it: the texts in order; a line break becomes a space; a note, its label. */
+export function fromInText(node: In): string {
+  if (node.type === 'text') return node.text ?? '';
+  if (node.type === 'hardBreak') return ' ';
+  if (node.type === 'nota') return String(node.attrs?.rotulo ?? '');
+  return (node.content ?? []).map(fromInText).join('');
 }
 
-/** Blocos de texto na ordem do documento (o parágrafo de dentro de uma citação é um bloco `citacao`). */
-export function blocosDoDoc(doc: No): Bloco[] {
-  const out: Bloco[] = [];
+/** Text blocks in document order (a paragraph inside a quote is a `citacao` block). */
+export function blocksDoc(doc: In): Block[] {
+  const out: Block[] = [];
   for (const n of doc.content ?? []) {
-    if (n.type === 'paragraph') out.push({ id: String(n.attrs?.id ?? ''), tipo: 'paragrafo', texto: textoDoNo(n) });
-    else if (n.type === 'heading') out.push({ id: String(n.attrs?.id ?? ''), tipo: 'intertitulo', texto: textoDoNo(n) });
-    else if (n.type === 'blockquote') for (const p of n.content ?? []) if (p.type === 'paragraph') out.push({ id: String(p.attrs?.id ?? ''), tipo: 'citacao', texto: textoDoNo(p) });
+    if (n.type === 'paragraph') out.push({ id: String(n.attrs?.id ?? ''), tipo: 'paragrafo', texto: fromInText(n) });
+    else if (n.type === 'heading') out.push({ id: String(n.attrs?.id ?? ''), tipo: 'intertitulo', texto: fromInText(n) });
+    else if (n.type === 'blockquote') for (const p of n.content ?? []) if (p.type === 'paragraph') out.push({ id: String(p.attrs?.id ?? ''), tipo: 'citacao', texto: fromInText(p) });
   }
   return out;
 }
 
-/** Parágrafo como a mesa guarda em `paragrafos_json` (Docs, Substack, Instagram): espaços juntos, sem vazios. */
-export const normalParagrafo = (p: string) => p.replace(/\s+/g, ' ').trim();
-export const paragrafosDoDoc = (doc: No) => blocosDoDoc(doc).map((b) => normalParagrafo(b.texto)).filter(Boolean);
+/** A paragraph as the desk stores it in `paragrafos_json` (Docs, Substack, Instagram): spaces collapsed, no empties. */
+export const normalParagraph = (p: string) => p.replace(/\s+/g, ' ').trim();
+export const paragraphsDoc = (doc: In) => blocksDoc(doc).map((b) => normalParagraph(b.texto)).filter(Boolean);
 
-/** Sem título digitado, vale a primeira linha do texto. */
-export const tituloDaPrimeiraLinha = (doc: No) => (paragrafosDoDoc(doc)[0] ?? '').replace(/\s+/g, ' ').trim().slice(0, 120);
+/** Without a typed title, the first line of the text is used. */
+export const fromFirstLineTitle = (doc: In) => (paragraphsDoc(doc)[0] ?? '').replace(/\s+/g, ' ').trim().slice(0, 120);
 
 const unesc = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /**
- * HTML de um parágrafo do Google Docs (`<a href><i><b>texto</b></i></a>` por trecho, como src/lib/google.ts monta) →
- * nós de texto com as marcas. Só vale se o texto que sai for igual ao parágrafo da mesa; senão, texto puro.
+ * HTML of a Google Docs paragraph (`<a href><i><b>text</b></i></a>` per run, as src/lib/google.ts builds it) → text
+ * nodes with marks. Only valid if the resulting text equals the desk's paragraph; otherwise, plain text.
  */
-export function inlineDoHtmlDocs(html: string, texto: string): No[] {
-  const nos: No[] = [];
+export function inlineHtmlDocs(html: string, text: string): In[] {
+  const nodes: In[] = [];
   const re = /(?:<a href="([^"]*)">)?(<i>)?(<b>)?([^<]+)(?:<\/b>)?(?:<\/i>)?(?:<\/a>)?/g;
   for (const m of html.matchAll(re)) {
     const t = unesc(m[4]).replace(/\s+/g, ' ');
     if (!t) continue;
-    const marks: Marca[] = [];
+    const marks: Brand[] = [];
     if (m[3]) marks.push({ type: 'bold' });
     if (m[2]) marks.push({ type: 'italic' });
     if (m[1] && /^https?:\/\//.test(unesc(m[1]))) marks.push({ type: 'link', attrs: { href: unesc(m[1]) } });
-    nos.push({ type: 'text', text: t, ...(marks.length ? { marks } : {}) });
+    nodes.push({ type: 'text', text: t, ...(marks.length ? { marks } : {}) });
   }
-  // O resultado tem de ser exatamente o parágrafo da mesa (espaços nas pontas e entre trechos inclusive).
-  if (nos.map((n) => n.text).join('') !== texto) return texto ? [{ type: 'text', text: texto }] : [];
-  return nos;
+  // The result must be exactly the desk's paragraph (including spaces at the ends and between runs).
+  if (nodes.map((n) => n.text).join('') !== text) return text ? [{ type: 'text', text: text }] : [];
+  return nodes;
 }
 
 /**
- * Texto antigo (sem `doc_json`): os parágrafos viram blocos com ids derivados da posição (`p0`, `p1`…), para as marcas
- * de antes (presas ao índice) acharem o bloco. Do Docs, o intertítulo e o negrito, itálico e links de lá.
+ * Older text (no `doc_json`): paragraphs become blocks with ids derived from position (`p0`, `p1`…), so earlier marks
+ * (tied to the index) find their block. From Docs: subheadings, and bold, italic and links from there.
  */
-export function docDeParagrafos(paragrafos: string[], docs?: { texto: string; estilo: string | null; html: string }[] | null): No {
-  const porTexto = new Map((docs ?? []).map((p) => [p.texto, p]));
+export function docParagraphs(paragraphs: string[], docs?: { texto: string; estilo: string | null; html: string }[] | null): In {
+  const perText = new Map((docs ?? []).map((p) => [p.texto, p]));
   return {
     type: 'doc',
-    content: paragrafos.map((texto, i) => {
-      const d = porTexto.get(texto);
-      const content = d ? inlineDoHtmlDocs(d.html, texto) : texto ? [{ type: 'text', text: texto }] : [];
+    content: paragraphs.map((text, i) => {
+      const d = perText.get(text);
+      const content = d ? inlineHtmlDocs(d.html, text) : text ? [{ type: 'text', text: text }] : [];
       return /^HEADING_/.test(d?.estilo ?? '')
         ? { type: 'heading', attrs: { id: `p${i}`, level: 2 }, content }
         : { type: 'paragraph', attrs: { id: `p${i}` }, content };
@@ -81,40 +81,40 @@ export function docDeParagrafos(paragrafos: string[], docs?: { texto: string; es
   };
 }
 
-export class ErroDoc extends Error {
+export class DocError extends Error {
   constructor(message: string, readonly en: string) { super(message); }
 }
 
 /**
- * Documento vindo da tela → documento limpo: só os nós e marcas permitidos (o resto sai), link só http(s), intertítulo
- * sempre h2. Bloco sem id, com id inválido ou repetido ganha um id novo (`novoId`).
+ * Document from the screen → clean document: only the allowed nodes and marks (the rest is dropped), links only
+ * http(s), subheadings always h2. A block without an id, with an invalid or repeated id gets a new one (`newId`).
  */
-export function limparDoc(raw: unknown, novoId: () => string): No {
-  if (!raw || typeof raw !== 'object' || (raw as No).type !== 'doc' || !Array.isArray((raw as No).content)) {
-    throw new ErroDoc('doc: documento do editor inválido', 'doc: invalid editor document');
+export function cleanDoc(raw: unknown, newId: () => string): In {
+  if (!raw || typeof raw !== 'object' || (raw as In).type !== 'doc' || !Array.isArray((raw as In).content)) {
+    throw new DocError('doc: documento do editor inválido', 'doc: invalid editor document');
   }
-  if (JSON.stringify(raw).length > DOC_MAX) throw new ErroDoc('Texto longo demais.', 'Text too long.');
-  const vistos = new Set<string>();
-  const idDe = (a: unknown) => {
-    const v = typeof a === 'string' && ID_OK.test(a) && !vistos.has(a) ? a : novoId().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
-    vistos.add(v);
+  if (JSON.stringify(raw).length > DOC_MAX) throw new DocError('Texto longo demais.', 'Text too long.');
+  const seen = new Set<string>();
+  const id = (a: unknown) => {
+    const v = typeof a === 'string' && ID_OK.test(a) && !seen.has(a) ? a : newId().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+    seen.add(v);
     return v;
   };
-  const marcas = (ms: unknown): Marca[] => {
+  const marks = (ms: unknown): Brand[] => {
     if (!Array.isArray(ms)) return [];
-    const out: Marca[] = [];
-    for (const m of ms as Marca[]) {
+    const out: Brand[] = [];
+    for (const m of ms as Brand[]) {
       if (m?.type === 'bold' || m?.type === 'italic') out.push({ type: m.type });
       else if (m?.type === 'link' && typeof m.attrs?.href === 'string' && /^https?:\/\//.test(m.attrs.href) && m.attrs.href.length <= 2000) out.push({ type: 'link', attrs: { href: m.attrs.href } });
     }
     return out;
   };
-  const inline = (ns: unknown): No[] => {
+  const inline = (ns: unknown): In[] => {
     if (!Array.isArray(ns)) return [];
-    const out: No[] = [];
-    for (const n of ns as No[]) {
+    const out: In[] = [];
+    for (const n of ns as In[]) {
       if (n?.type === 'text' && typeof n.text === 'string' && n.text) {
-        const ms = marcas(n.marks);
+        const ms = marks(n.marks);
         out.push({ type: 'text', text: n.text, ...(ms.length ? { marks: ms } : {}) });
       } else if (n?.type === 'hardBreak') out.push({ type: 'hardBreak' });
       else if (n?.type === 'nota' && typeof n.attrs?.rotulo === 'string' && typeof n.attrs?.evidencia === 'string') {
@@ -123,46 +123,46 @@ export function limparDoc(raw: unknown, novoId: () => string): No {
     }
     return out;
   };
-  // Os blocos de texto (parágrafo ou intertítulo) de qualquer profundidade: citação dentro de citação, lista ou outro
-  // contêiner que o editor deixou passar vira parágrafos, na ordem, sem perder o texto.
-  const blocosDeTexto = (n: No | undefined): No[] =>
-    n?.type === 'paragraph' || n?.type === 'heading' ? [n] : Array.isArray(n?.content) ? (n.content as No[]).flatMap(blocosDeTexto) : [];
-  const paragrafo = (p: No): No => ({ type: 'paragraph', attrs: { id: idDe(p.attrs?.id) }, content: inline(p.content) });
-  const content: No[] = [];
-  for (const n of (raw as No).content as No[]) {
-    if (n?.type === 'paragraph') content.push(paragrafo(n));
+  // Text blocks (paragraph or subheading) at any depth: a quote inside a quote, a list or another container the editor
+  // let through becomes paragraphs, in order, without losing text.
+  const blocksText = (n: In | undefined): In[] =>
+    n?.type === 'paragraph' || n?.type === 'heading' ? [n] : Array.isArray(n?.content) ? (n.content as In[]).flatMap(blocksText) : [];
+  const paragraph = (p: In): In => ({ type: 'paragraph', attrs: { id: id(p.attrs?.id) }, content: inline(p.content) });
+  const content: In[] = [];
+  for (const n of (raw as In).content as In[]) {
+    if (n?.type === 'paragraph') content.push(paragraph(n));
     else if (n?.type === 'imagem') {
       const { src, alt } = n.attrs ?? {};
       if (typeof src === 'string' && /^https?:\/\//.test(src) && src.length <= 2000) content.push({ type: 'imagem', attrs: { src, alt: typeof alt === 'string' ? alt.slice(0, 300) : '' } });
     } else if (n?.type === 'apoio') {
-      const { patrocinio, texto } = n.attrs ?? {};
-      if (typeof texto === 'string' && texto.trim()) content.push({ type: 'apoio', attrs: { patrocinio: typeof patrocinio === 'string' ? patrocinio.slice(0, 60) : '', texto: texto.trim().slice(0, 300) } });
-    } else if (n?.type === 'heading') content.push({ type: 'heading', attrs: { id: idDe(n.attrs?.id), level: 2 }, content: inline(n.content) });
+      const { patrocinio: sponsorship, texto: text } = n.attrs ?? {};
+      if (typeof text === 'string' && text.trim()) content.push({ type: 'apoio', attrs: { patrocinio: typeof sponsorship === 'string' ? sponsorship.slice(0, 60) : '', texto: text.trim().slice(0, 300) } });
+    } else if (n?.type === 'heading') content.push({ type: 'heading', attrs: { id: id(n.attrs?.id), level: 2 }, content: inline(n.content) });
     else if (n?.type === 'blockquote') {
-      // Dentro da citação só há parágrafo (de um nível): intertítulo e citação aninhada viram parágrafos dela.
-      const ps = blocosDeTexto(n).map(paragrafo);
+      // Inside a quote there are only paragraphs (one level): subheadings and nested quotes become its paragraphs.
+      const ps = blocksText(n).map(paragraph);
       if (ps.length) content.push({ type: 'blockquote', content: ps });
-    } else content.push(...blocosDeTexto(n).map(paragrafo));
+    } else content.push(...blocksText(n).map(paragraph));
   }
-  if (!content.length) content.push({ type: 'paragraph', attrs: { id: idDe(null) }, content: [] });
-  if (blocosDoDoc({ type: 'doc', content }).length > BLOCOS_MAX) throw new ErroDoc(`Texto com parágrafos demais (até ${BLOCOS_MAX}).`, `Too many paragraphs (up to ${BLOCOS_MAX}).`);
+  if (!content.length) content.push({ type: 'paragraph', attrs: { id: id(null) }, content: [] });
+  if (blocksDoc({ type: 'doc', content }).length > BLOCKS_MAX) throw new DocError(`Texto com parágrafos demais (até ${BLOCKS_MAX}).`, `Too many paragraphs (up to ${BLOCKS_MAX}).`);
   return { type: 'doc', content };
 }
 
-/** Parágrafos novos (texto colado no lugar do documento) com os ids dos blocos de antes que têm o mesmo texto. */
-export function docComIdsDe(paragrafos: string[], antes: Bloco[], novoId: () => string): No {
-  const livres = new Map<string, string[]>();
-  for (const b of antes) livres.set(normalParagrafo(b.texto), [...(livres.get(normalParagrafo(b.texto)) ?? []), b.id]);
+/** New paragraphs (text pasted in place of the document) with the ids of earlier blocks that have the same text. */
+export function docWithIdsOf(paragraphs: string[], before: Block[], newId: () => string): In {
+  const free = new Map<string, string[]>();
+  for (const b of before) free.set(normalParagraph(b.texto), [...(free.get(normalParagraph(b.texto)) ?? []), b.id]);
   return {
     type: 'doc',
-    content: paragrafos.map((texto) => {
-      const id = livres.get(texto)?.shift() ?? novoId();
-      return { type: 'paragraph', attrs: { id }, content: texto ? [{ type: 'text', text: texto }] : [] };
+    content: paragraphs.map((text) => {
+      const id = free.get(text)?.shift() ?? newId();
+      return { type: 'paragraph', attrs: { id }, content: text ? [{ type: 'text', text: text }] : [] };
     }),
   };
 }
 
-function inlineHtml(ns: No[] = []): string {
+function inlineHtml(ns: In[] = []): string {
   return ns.map((n) => {
     if (n.type === 'hardBreak') return '<br>';
     if (n.type === 'nota') return esc(String(n.attrs?.rotulo ?? ''));
@@ -176,27 +176,27 @@ function inlineHtml(ns: No[] = []): string {
   }).join('');
 }
 
-/** "Copiar para o Substack": título e documento em HTML (h1, h2, p, blockquote, strong, em, a, img) e em texto puro. */
-export function substackDoDoc(titulo: string, doc: No): { html: string; texto: string } {
-  const partes: string[] = [`<h1>${esc(titulo)}</h1>`];
-  const textos: string[] = [titulo];
+/** "Copy to Substack": title and document as HTML (h1, h2, p, blockquote, strong, em, a, img) and as plain text. */
+export function substackDoc(title: string, doc: In): { html: string; texto: string } {
+  const parts: string[] = [`<h1>${esc(title)}</h1>`];
+  const texts: string[] = [title];
   for (const n of doc.content ?? []) {
     if (n.type === 'paragraph' || n.type === 'heading') {
-      const t = normalParagrafo(textoDoNo(n));
+      const t = normalParagraph(fromInText(n));
       if (!t) continue;
-      partes.push(n.type === 'heading' ? `<h2>${inlineHtml(n.content)}</h2>` : `<p>${inlineHtml(n.content)}</p>`);
-      textos.push(t);
+      parts.push(n.type === 'heading' ? `<h2>${inlineHtml(n.content)}</h2>` : `<p>${inlineHtml(n.content)}</p>`);
+      texts.push(t);
     } else if (n.type === 'blockquote') {
-      const ps = (n.content ?? []).filter((p) => normalParagrafo(textoDoNo(p)));
+      const ps = (n.content ?? []).filter((p) => normalParagraph(fromInText(p)));
       if (!ps.length) continue;
-      partes.push(`<blockquote>${ps.map((p) => `<p>${inlineHtml(p.content)}</p>`).join('')}</blockquote>`);
-      textos.push(...ps.map((p) => normalParagrafo(textoDoNo(p))));
+      parts.push(`<blockquote>${ps.map((p) => `<p>${inlineHtml(p.content)}</p>`).join('')}</blockquote>`);
+      texts.push(...ps.map((p) => normalParagraph(fromInText(p))));
     } else if (n.type === 'imagem') {
-      partes.push(`<p><img src="${esc(String(n.attrs?.src ?? ''))}" alt="${esc(String(n.attrs?.alt ?? ''))}"></p>`);
+      parts.push(`<p><img src="${esc(String(n.attrs?.src ?? ''))}" alt="${esc(String(n.attrs?.alt ?? ''))}"></p>`);
     } else if (n.type === 'apoio') {
-      partes.push(`<p><em>${esc(String(n.attrs?.texto ?? ''))}</em></p>`);
-      textos.push(String(n.attrs?.texto ?? ''));
+      parts.push(`<p><em>${esc(String(n.attrs?.texto ?? ''))}</em></p>`);
+      texts.push(String(n.attrs?.texto ?? ''));
     }
   }
-  return { html: partes.join('\n'), texto: textos.join('\n\n') };
+  return { html: parts.join('\n'), texto: texts.join('\n\n') };
 }

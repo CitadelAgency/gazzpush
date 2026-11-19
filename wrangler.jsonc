@@ -9,7 +9,7 @@
 
   // Custom domain: uncomment and set your hostname. Without it, the app is served on workers.dev. Cookies and CSRF
   // are bound to the origin in PUBLIC_BASE_URL, so serve the app from a single host.
-  // "routes": [{ "pattern": "<SEU_DOMINIO>", "custom_domain": true }],
+  // "routes": [{ "pattern": "<YOUR_DOMAIN>", "custom_domain": true }],
   // "workers_dev": false,
 
   // Web app (Vite + React in web/, "npm run web:build"). API, media, health and public pages go through the Worker;

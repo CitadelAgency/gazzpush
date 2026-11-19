@@ -11,7 +11,7 @@ defined in the [glossary](glossary.md).
 src/                    Cloudflare Worker (TypeScript, no DOM)
   index.ts              entry point: public routes, /media, auth, queue, cron, email handlers
   env.ts                bindings, secrets and queue message types
-  kernel/estados.ts     state machine for pieces, leads and documents
+  kernel/states.ts      state machine for pieces, leads and documents
   shell/                HTTP layer: API routes (Hono), auth, tenancy, i18n
   lib/                  domain logic, mostly pure functions with unit tests
   monitor/              cron scheduler and queue consumer
@@ -19,11 +19,13 @@ src/                    Cloudflare Worker (TypeScript, no DOM)
   templates/            HTML templates for cards, rendered in Browser Rendering
   reelsContainer.ts     Durable Object that fronts the Reels container
 web/                    React single-page app (Vite)
-  src/telas/            screens, one lazy chunk each
-  src/casca/            app shell: sidebar, menus, command palette, shortcuts
-  src/materia/          story desk panels: dossier, legal shield, documents, recordings
+  src/screens/          screens, one lazy chunk each
+  src/shell/            app shell: sidebar, menus, command palette, shortcuts
+  src/story/            story desk panels: dossier, legal shield, documents, recordings
+  src/onboarding/       new-outlet flow and card previews
+  src/recorder/         in-browser recorder with an offline queue
   src/kit/              UI kit components
-  src/estilo/           design tokens and global CSS (see DESIGN.md)
+  src/styles/           design tokens and global CSS (see DESIGN.md)
   e2e/                  Playwright end-to-end tests
 container/reels/        Dockerfile and server for Reels rendering (HyperFrames, Chrome, FFmpeg)
 migrations/             D1 migrations, applied in order
@@ -115,7 +117,7 @@ video in the container and goes through the same review and publishing steps.
 
 ### State machine
 
-Status changes for pieces, leads and documents happen in exactly one place, `transitar` in `src/kernel/estados.ts`. It
+Status changes for pieces, leads and documents happen in exactly one place, `transition` in `src/kernel/states.ts`. It
 holds the transition table, issues a conditional `UPDATE`, writes an event and applies any extra statements in the
 same `DB.batch`, so a transition and its side effects are atomic. Enums live in code, not in SQLite `CHECK`
 constraints.
@@ -134,9 +136,9 @@ superseded round cannot touch it.
 
 ## The story desk
 
-Outlets in `autoral` mode get the story desk (`/t/:veiculo/textos/:id`). Its API lives in `src/shell/textos.ts` and its
-logic in `src/lib/mesa.ts` (checking), `src/lib/escudo.ts` (legal shield), `src/lib/documento.ts` (PDFs),
-`src/lib/gravacao.ts` (recordings) and `src/lib/viva.ts` (alerts). The pattern is the same everywhere:
+Outlets in `autoral` mode get the story desk (`/t/:veiculo/textos/:id`). Its API lives in `src/shell/texts.ts` and its
+logic in `src/lib/desk.ts` (checking), `src/lib/shield.ts` (legal shield), `src/lib/document.ts` (PDFs),
+`src/lib/recording.ts` (recordings) and `src/lib/living.ts` (alerts). The pattern is the same everywhere:
 
 1. A model is asked a narrow question and must answer in a strict JSON shape.
 2. The code verifies the answer against stored data: the passage must be in the source letter by letter, the page must
@@ -151,7 +153,7 @@ caching. Results stream back as NDJSON.
 ## Web app
 
 - **Single-page app** built by Vite into `web/dist`, served as Worker assets from the same origin. No SSR.
-- **Routing** with React Router in library mode, one lazy chunk per screen (`web/src/rotas.tsx`). The URL holds the
+- **Routing** with React Router in library mode, one lazy chunk per screen (`web/src/routes.tsx`). The URL holds the
   outlet and the section.
 - **Data** with TanStack Query and the Hono RPC client (`hc<AppType>`, imported as a type only). Query keys start with
   the tenant id.
@@ -163,17 +165,17 @@ caching. Results stream back as NDJSON.
 - **Styling**: Tailwind CSS 4 with the project's own tokens only (the default palette is removed). See
   [DESIGN.md](../DESIGN.md).
 - **i18n**: every UI string is written as a pair, `t("Aprovar", "Approve")`, next to where it is used
-  (`web/src/idioma.ts`, `src/shell/idioma.ts`). The client sends `x-idioma` with each request, and the API answers
+  (`web/src/language.ts`, `src/shell/language.ts`). The client sends `x-idioma` with each request, and the API answers
   errors in that language.
 
 ## Security model
 
 - **Authentication**: Better Auth on D1, with email and password plus optional Google. Session cookies are tied to the
   origin in `PUBLIC_BASE_URL`, so serve the app from a single host.
-- **Tenancy**: every outlet route is `/api/t/:tenantId/...` and goes through `requireMembro`, which checks membership
+- **Tenancy**: every outlet route is `/api/t/:tenantId/...` and goes through `requireMember`, which checks membership
   and role (`admin`, `editor`, `reporter`). The actor recorded on a decision always comes from the session, never from
   the request body. The test suite includes cross-tenant (IDOR) checks across the main route families.
-- **Same-origin requests**: every `/api/*` request goes through `exigirMesmaOrigem` before the session check.
+- **Same-origin requests**: every `/api/*` request goes through `requireSameOrigin` before the session check.
 - **Media**: `/media/*` requires a session and tenant membership. Instagram fetches artwork through a short-lived
   signed URL created at publish time.
 - **Secrets at rest**: social tokens and per-outlet AI keys are encrypted with `TOKEN_ENC_KEY`.

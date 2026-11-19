@@ -2,36 +2,36 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router/dom";
-import { ErroApi } from "./api";
-import { roteador } from "./rotas";
-import { useIdioma } from "./idioma";
-import "./estilo/tokens.css";
-import "./estilo/prova.css";
-import "./kit/lapis.css";
-import "./estilo/rodada4.css";
-import { instalarDicas } from "./dica";
-import { instalarMovimento } from "./movimento";
-import "./mesa";   // aplica a aparência escolhida (papel ou à noite) antes de desenhar
+import { ApiError } from "./api";
+import { router } from "./routes";
+import { useLanguage } from "./language";
+import "./styles/tokens.css";
+import "./styles/proof.css";
+import "./kit/pencil.css";
+import "./styles/desk.css";
+import { installTips } from "./tooltip";
+import { installMotion } from "./motion";
+import "./theme";   // applies the chosen appearance (paper or night) before drawing
 
-instalarMovimento();
-instalarDicas();
+installMotion();
+installTips();
 
-const consultas = new QueryClient({
+const queries = new QueryClient({
   defaultOptions: {
-    // Erro 4xx não melhora repetindo; rede e 5xx tentam mais uma vez.
-    queries: { retry: (n, e) => n < 1 && !(e instanceof ErroApi && e.status >= 400 && e.status < 500) },
+    // A 4xx error does not improve by repeating; network and 5xx errors try once more.
+    queries: { retry: (n, e) => n < 1 && !(e instanceof ApiError && e.status >= 400 && e.status < 500) },
   },
 });
 
-// Trocar o idioma remonta as telas (o texto sai de `t(...)` na hora de desenhar); a URL e o cache das consultas ficam.
+// Switching language remounts the screens (the text comes from `t(...)` at draw time); the URL and the query cache stay.
 function App() {
-  const idioma = useIdioma();
-  return <RouterProvider key={idioma} router={roteador} />;
+  const language = useLanguage();
+  return <RouterProvider key={language} router={router} />;
 }
 
 createRoot(document.getElementById("app")!).render(
   <StrictMode>
-    <QueryClientProvider client={consultas}>
+    <QueryClientProvider client={queries}>
       <App />
     </QueryClientProvider>
   </StrictMode>,

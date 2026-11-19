@@ -8,7 +8,7 @@ are relative to `/api/t/:tenantId`.
 
 ## Publication certificates
 
-Every piece actually published gets a certificate (`src/lib/certidao.ts`). `registrarPublicacao` and
+Every piece actually published gets a certificate (`src/lib/certificate.ts`). `recordPublication` and
 `POST /pecas/:id/publicada` queue a `{ tipo: 'certidao' }` message; publishing never waits for it. Pieces published to a
 `simulada` (simulated) account get none.
 
@@ -36,7 +36,7 @@ the timestamp is later than the publication.
 English.
 
 - **What to do now**: the steps for the first hours.
-- **Open case** (`POST /kit/casos`, `DELETE /kit/casos/:id`): type (`TIPOS_CASO`: `desativada` deactivated,
+- **Open case** (`POST /kit/casos`, `DELETE /kit/casos/:id`): type (`CASE_TYPES`: `desativada` deactivated,
   `direito_autoral` copyright, `cobranca` billing, `outro` other), a note of up to 500 characters, and the days counted.
   The deadline comes from the notice the person received: the app does not know Meta's deadlines.
 - **Three fixed templates** to copy. They are not legal advice; fill in the bracketed fields and adapt them.
@@ -45,7 +45,7 @@ English.
 ## Account X-ray
 
 The X-ray reviews an outlet's old posts for third-party material that could trigger a copyright claim
-(`src/lib/raiox.ts`, `src/lib/raioxFila.ts`).
+(`src/lib/xray.ts`, `src/lib/xrayQueue.ts`).
 
 1. The person requests their data export from Instagram ("Download your information") in JSON and selects the zip on
    the kit tab.
@@ -53,7 +53,7 @@ The X-ray reviews an outlet's old posts for third-party material that could trig
    for any JSON object with `uri` and `creation_timestamp`, resolves `uri` from the zip root and repairs mis-encoded
    accents. **Private messages are not read.**
 3. Each image becomes a JPEG of up to 512 px; a video becomes one frame. Only that thumbnail and the caption are
-   uploaded, up to 2,000 items per batch (`MAX_ITENS_LOTE`). One X-ray per outlet at a time (`POST /raiox`,
+   uploaded, up to 2,000 items per batch (`MAX_ITEMS_BATCH`). One X-ray per outlet at a time (`POST /raiox`,
    `POST /raiox/:lote/itens`, `DELETE /raiox/:lote`).
 4. The `raiox` queue runs `@cf/meta/llama-3.2-11b-vision-instruct` to detect a third-party watermark, a TV, newspaper or
    agency logo, or a photo credit written on the image; code also looks for credits in the caption.
@@ -65,10 +65,10 @@ image (about US$ 0.0001), so a 2,000-item batch is around US$ 0.20 before Worker
 
 - **Send to the channel** in **Ready to post**: shares the post to a WhatsApp channel without any API. On mobile it
   uses the system share sheet; on desktop it copies the caption and downloads the files.
-- **Public outlet page** at `/v/:slug` (`src/lib/paginaVeiculo.ts`): off by default, turned on by an admin in the kit
+- **Public outlet page** at `/v/:slug` (`src/lib/outletPage.ts`): off by default, turned on by an admin in the kit
   (`PATCH /pagina-publica`). It lists posts actually published (never simulated ones), 30 per page, with advertising
   labelled, and nothing internal: only art, caption and link.
-- **Download the month** (`GET /kit/mes`, `src/lib/arquivoMes.ts`): a zip built in streaming with each post's art,
+- **Download the month** (`GET /kit/mes`, `src/lib/monthArchive.ts`): a zip built in streaming with each post's art,
   caption, link and certificate (`manifesto.json` and `carimbo.tsr`, without the PDF, to avoid opening a browser per
   post). JPEG and MP4 are stored without recompression.
 

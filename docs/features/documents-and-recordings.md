@@ -4,24 +4,24 @@ Investigations run on primary material: a 300-page audit report, a contract, a c
 This part of the [story desk](story-desk.md) lets the journalist question a PDF and get only answers that cite a page
 and a passage verified to exist there, and checks every quotation in the text against the recorded interview. The model
 helps find things; code decides whether what it found is real. Routes are relative to `/api/t/:tenantId/textos` and
-live in `src/shell/textos.ts`.
+live in `src/shell/texts.ts`.
 
 ## Ask the document
 
-Logic in `src/lib/documento.ts`. UI: Dossier tab, **Documents**.
+Logic in `src/lib/document.ts`. UI: Dossier tab, **Documents**.
 
 ### Upload
 
 `POST /:id/documentos` with the raw PDF as the body and the file name in the `x-nome` header (editors only).
 
-- Up to 20 MB (`PDF_MAX_BYTES`) and 500 pages (`PAGINAS_MAX`). A body that does not start with `%PDF-` returns `422`.
+- Up to 20 MB (`PDF_MAX_BYTES`) and 500 pages (`PAGES_MAX`). A body that does not start with `%PDF-` returns `422`.
 - The same file again (same SHA-256) returns the existing one.
 - The original is stored in R2 under `documentos/<outlet>/<id>.pdf` (`GET /:id/documentos/:arquivo/pdf` opens it), and
   reading is queued on the monitor queue (message `arquivo`).
 
 ### Reading and indexing
 
-`processarArquivo` extracts the text of every page with `unpdf` and stores it in `arquivo_paginas` and in the FTS5
+`processFile` extracts the text of every page with `unpdf` and stores it in `arquivo_paginas` and in the FTS5
 index `arquivo_paginas_fts` (accent-insensitive). When the `DOCS_VETOR` binding is present, chunks of each page (about
 1,000 characters, cut at sentence ends, with some overlap) are embedded with `@cf/baai/bge-m3` into the
 `redacao-documentos` Vectorize index, one namespace per file. If indexing fails, search falls back to words only, with a
@@ -42,7 +42,7 @@ warning. An image-only PDF (a scan without a text layer) or a broken file is mar
    answer is discarded as invalid. A question that matches no page does not call the model. If the model is down:
    `502`, no answer.
 
-Every question is stored in `perguntas` with a status (`SituacaoPergunta`): `respondida` (answered), `nao_encontrou`
+Every question is stored in `perguntas` with a status (`QuestionStatus`): `respondida` (answered), `nao_encontrou`
 (not found), `invalida` (invalid answer discarded) or `falhou` (failed).
 
 ### From passage to evidence
@@ -68,7 +68,7 @@ the same order of magnitude. A mismatch becomes an arithmetic flag in the editor
 
 ## Recordings
 
-Logic in `src/lib/gravacao.ts`. UI: Dossier tab, **Recordings**.
+Logic in `src/lib/recording.ts`. UI: Dossier tab, **Recordings**.
 
 ### Upload
 
@@ -82,7 +82,7 @@ Logic in `src/lib/gravacao.ts`. UI: Dossier tab, **Recordings**.
 
 ### Transcription
 
-`processarGravacao` uses Whisper on Workers AI (`@cf/openai/whisper-large-v3-turbo`) in the outlet's language, with a
+`processRecording` uses Whisper on Workers AI (`@cf/openai/whisper-large-v3-turbo`) in the outlet's language, with a
 silence filter. The transcript is stored as returned, segment by segment with per-word timings (`gravacao_trechos`). The
 model does not summarize or correct anything. If Whisper is unavailable or the audio has no speech, the recording is
 marked as not transcribable, with the reason. Uploading the same file again restarts a failed transcription.
@@ -109,11 +109,11 @@ quotes" searches the same transcripts and inserts speech into the text.
 **Record** on the Dossier tab records the interview directly in the browser, showing elapsed time, microphone level and
 "Saved up to mm:ss", which only advances when the server confirms.
 
-- Audio is uploaded in 5-second chunks (`SEGUNDOS_POR_FATIA`) inside 120-second segments (`SEGUNDOS_POR_SEGMENTO`)
-  with 1 second of overlap (`SOBREPOSICAO_S`), so no word is lost at a seam. Bitrate: 48 kbps (`src/lib/segmentos.ts`,
-  `web/src/gravador/`).
+- Audio is uploaded in 5-second chunks (`PER_SLICE_SECONDS`) inside 120-second segments (`PER_SEGMENT_SECONDS`)
+  with 1 second of overlap (`OVERLAP_S`), so no word is lost at a seam. Bitrate: 48 kbps (`src/lib/segments.ts`,
+  `web/src/recorder/`).
 - A chunk without confirmation is kept in IndexedDB and uploaded when the network returns.
-- Up to 3 hours per session (`TETO_SESSAO_S`).
+- Up to 3 hours per session (`SESSION_CAP_S`).
 - Closing the tab loses nothing already uploaded: on return the screen offers to finish, and the 15-minute cron closes
   sessions idle for more than 2 hours.
 

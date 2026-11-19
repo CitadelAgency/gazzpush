@@ -1,17 +1,17 @@
 import { launch } from '@cloudflare/playwright';
 import type { Env } from '../env';
-import type { Marca, Pauta } from './pauta';
-import type { Rascunho } from './redacao';
+import type { Brand, Lead } from './lead';
+import type { Draft } from './drafting';
 import template from '../templates/card.html';
-import templateConvite from '../templates/convite.html';
-import { escolherCta, linkDoTexto } from './redacao';
-import { marcaDaguaTag } from './marcaDagua';
-import { ehConvite, normalizarCards, rotuloCard, type Card, type CardNormal, type Layout } from './cards';
-import { coresDoPapel, marcaComCopia, type EstiloPeca } from './estilo';
-import { conviteRico, corpoPorFrase, escapeHtml as escape, extrasDoCard, listaTag, preencherTemplate, varsDoCard, type BaseCard } from './cardHtml';
-import { CATALOGO_FONTES, classeTitulo, parDe, pesosDoPar, type ParFontes } from './tipografia';
-import { editoriaNoCard, localeConteudo, rotuloPublicidade, textosConteudo, type IdiomaConteudo } from './idiomaConteudo';
-import { ALTURA_CARROSSEL, qaCard, type MetricasLayout } from './qaLayout';
+import templateConvite from '../templates/cta.html';
+import { chooseCta, fromTextLink } from './drafting';
+import { waterTagBrand } from './watermark';
+import { isInvite, normalizeCards, cardLabel, type Card, type CardNormal, type Layout } from './cards';
+import { fromRoleColors, withCopyBrand, type PieceStyle } from './style';
+import { inviteRich, perSentenceBody, escapeHtml as escape, cardExtras, tagList, fillTemplate, cardVars, type BaseCard } from './cardHtml';
+import { CATALOG_SOURCES, titleClass, pair, fromPairWeights, type SourcesPair } from './typography';
+import { deskInCard, localeContent, advertisingLabel, textsContent, type ContentLanguage } from './contentLanguage';
+import { CAROUSEL_HEIGHT, qaCard, type MetricsLayout } from './qaLayout';
 import nunito from '../../assets/fonts/nunito-latin.woff2';
 import quicksand from '../../assets/fonts/quicksand-latin.woff2';
 import sourceSans from '../../assets/fonts/source-sans-3-latin.woff2';
@@ -22,55 +22,55 @@ import archivo from '../../assets/fonts/archivo-latin.woff2';
 export interface RenderInput {
   tenantId: string;
   pecaId: string;
-  versao: number;                 // entra na chave do R2: versões não se sobrescrevem
+  versao: number;                 // goes into the R2 key: versions do not overwrite each other
   formato: 'post' | 'carrossel';
-  rascunho: Rascunho;
-  pauta: Pauta;
-  ilustracaoR2?: string;          // ilustração gerada para a peça (todos os cards), se houver
-  /** Artes já renderizadas (versão anterior): card cujo HTML não mudou reaproveita as chaves, sem abrir o navegador. */
-  anteriores?: ArteRenderizada[];
-  /** Nome do arquivo com o hash do card (edição): tentativas que disputam a mesma versão não se sobrescrevem. */
+  rascunho: Draft;
+  pauta: Lead;
+  ilustracaoR2?: string;          // illustration generated for the piece (all cards), if any
+  /** Art already rendered (previous version): a card whose HTML did not change reuses the keys, without opening the browser. */
+  anteriores?: ArtRendered[];
+  /** File name with the card hash (edits): attempts competing for the same version do not overwrite each other. */
   chavesPorConteudo?: boolean;
-  /** `r916`: o card em 9:16 para o Reels (src/lib/reels.ts). Sem ele, 1080×1350. */
+  /** `r916`: the card in 9:16 for Reels (src/lib/reels.ts). Without it, 1080×1350. */
   quadro?: 'r916';
-  /** Data de hoje para o card sem data de fato (ISO). O Reels congela a do pedido: o replay dá o mesmo HTML. */
+  /** Today's date for a card without a fact date (ISO). Reels freezes the request's: the replay gives the same HTML. */
   hoje?: string;
 }
 
-export type { MetricasLayout } from './qaLayout';
+export type { MetricsLayout as MetricasLayout } from './qaLayout';
 
-export interface ArteRenderizada {
-  /** Papel antigo, ou o layout: o rótulo do card no pacote e na tela (peças antigas só têm este campo). */
+export interface ArtRendered {
+  /** Old role, or the layout: the card's label in the package and on screen (old pieces only have this field). */
   papel: string;
-  id?: string;                    // id do card (cards.ts); ausente em peça antiga
+  id?: string;                    // card id (cards.ts); missing on old pieces
   layout?: Layout;
   png: string;                    // chave R2
   jpg: string;                    // chave R2 (IG Graph exige JPEG)
-  /** SHA-256 do HTML do card: igual na versão seguinte = a mesma imagem, reaproveitada. */
+  /** SHA-256 of the card HTML: the same in the next version = the same image, reused. */
   hash?: string;
-  /** Ilustração usada no card (a edição reaproveita a mesma). */
+  /** Illustration used on the card (editing reuses the same one). */
   arte?: string;
-  metricas: MetricasLayout;
+  metricas: MetricsLayout;
 }
 
-/** Card reprovado no QA de layout (texto não cabe, sobreposição): a edição mostra o motivo no próprio card. */
-export class ErroLayout extends Error {
+/** Card rejected by layout QA (text does not fit, overlap): editing shows the reason on the card itself. */
+export class LayoutError extends Error {
   name = 'ErroLayout';
-  constructor(readonly cardId: string, readonly indice: number, readonly metricas: MetricasLayout, rotulo: string) {
-    super(`layout reprovado no card ${indice + 1} (${rotulo}): ${JSON.stringify(metricas)}`);
+  constructor(readonly cardId: string, readonly indice: number, readonly metricas: MetricsLayout, label: string) {
+    super(`layout reprovado no card ${indice + 1} (${label}): ${JSON.stringify(metricas)}`);
   }
 }
 
-const FONTES: Record<string, ArrayBuffer> = {
+const SOURCES: Record<string, ArrayBuffer> = {
   'nunito-latin.woff2': nunito, 'quicksand-latin.woff2': quicksand, 'source-sans-3-latin.woff2': sourceSans,
   'source-serif-4-latin.woff2': sourceSerif, 'inter-latin.woff2': inter, 'archivo-latin.woff2': archivo,
 };
-const b64Fontes = new Map<string, string>();
-/** Base64 das duas fontes do par (memorizado: o mesmo arquivo serve a todos os cards). */
-export function fontesDoPar(par: ParFontes) {
-  const def = CATALOGO_FONTES[par];
-  const de = (arq: string) => b64Fontes.get(arq) ?? (b64Fontes.set(arq, b64(FONTES[arq])), b64Fontes.get(arq)!);
-  return { FONT_BODY: de(def.corpo.arquivo), FONT_DISPLAY: de(def.destaque.arquivo), ...pesosDoPar(par) };
+const b64Sources = new Map<string, string>();
+/** Base64 of the pair's two fonts (memoised: the same file serves every card). */
+export function fromPairSources(pair: SourcesPair) {
+  const def = CATALOG_SOURCES[pair];
+  const from = (file: string) => b64Sources.get(file) ?? (b64Sources.set(file, b64(SOURCES[file])), b64Sources.get(file)!);
+  return { FONT_BODY: from(def.corpo.arquivo), FONT_DISPLAY: from(def.destaque.arquivo), ...fromPairWeights(pair) };
 }
 
 function b64(bytes: ArrayBuffer | Uint8Array) {
@@ -80,10 +80,10 @@ function b64(bytes: ArrayBuffer | Uint8Array) {
   return btoa(s);
 }
 
-// data_fato vem só com o dia (AAAA-MM-DD): new Date() leria meia-noite UTC, que em São Paulo é o dia anterior.
-export const formatarData = (iso: string | null | undefined, idioma?: IdiomaConteudo) =>
+// data_fato only carries the day (YYYY-MM-DD): new Date() would read UTC midnight, which in São Paulo is the day before.
+export const formatDate = (iso: string | null | undefined, language?: ContentLanguage) =>
   iso
-    ? new Intl.DateTimeFormat(localeConteudo(idioma), { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Sao_Paulo' }).format(
+    ? new Intl.DateTimeFormat(localeContent(language), { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Sao_Paulo' }).format(
         new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00-03:00` : iso),
       )
     : '';
@@ -91,107 +91,108 @@ export const formatarData = (iso: string | null | undefined, idioma?: IdiomaCont
 async function dataUri(env: Env, key: string | undefined | null, fallbackType: string) {
   if (!key) return null;
   const obj = await env.MEDIA.get(key);
-  if (!obj) throw new Error(`asset ${key} não encontrado no R2`);
+  if (!obj) throw new Error(`asset ${key} not found in R2`);
   return `data:${obj.httpMetadata?.contentType ?? fallbackType};base64,${b64(await obj.arrayBuffer())}`;
 }
 
-const nomeDaFonte = (f: { fonteNome: string | null; fonteUrl: string }) => f.fonteNome ?? new URL(f.fonteUrl).hostname;
+const fromSourceName = (f: { fonteNome: string | null; fonteUrl: string }) => f.fonteNome ?? new URL(f.fonteUrl).hostname;
 
-/** A parte do card que não muda entre os cards da peça (marca, data, fonte, rodapé). Também vai para a prévia da edição. */
-export function baseDoCard(pauta: Pauta, hoje = new Date()): BaseCard {
-  const marca: Marca = pauta.marca;
-  const fonte = pauta.fatos[0];
-  const local = pauta.bairro ?? null;
-  const resumo = pauta.tipoPost === 'resumo';
-  // Resumo do dia: cada notícia tem a sua data; a do card é a de hoje.
-  const dataFato = resumo ? null : pauta.fatos.map((f) => f.dataFato).find(Boolean) ?? null;
-  const autoral = pauta.modo === 'autoral';
-  const tx = textosConteudo(pauta.idioma);
-  const editoria = editoriaNoCard(pauta.editoria, pauta.idioma);
+/** The part of the card that does not change between a piece's cards (brand, date, source, footer). Also goes to the edit preview. */
+export function baseCard(lead: Lead, today = new Date()): BaseCard {
+  const brand: Brand = lead.marca;
+  const source = lead.fatos[0];
+  const local = lead.bairro ?? null;
+  const summary = lead.tipoPost === 'resumo';
+  // Daily digest: each story has its own date; the card's is today.
+  const factDate = summary ? null : lead.fatos.map((f) => f.dataFato).find(Boolean) ?? null;
+  const author = lead.modo === 'autoral';
+  const tx = textsContent(lead.idioma);
+  const desk = deskInCard(lead.editoria, lead.idioma);
   return {
-    autoral, idioma: pauta.idioma ?? 'pt-BR', par: parDe(marca.fontes),
-    cores: coresDoPapel({ fundo: marca.cores?.fundo ?? '#1f2a24', texto: marca.cores?.texto ?? '#fffcf6', acento: marca.cores?.acento ?? '#b3e9c2' }, pauta.estiloParams?.papelCores ?? 'normal'),
-    marcaNome: marca.nome ?? '',
-    editoria,
-    eyebrowCapa: local ? `${editoria} · ${local}`.replace(/^ · /, '') : editoria,
-    dataLabel: autoral ? '' : dataFato ? tx.ocorrencia : tx.publicacao,
-    dataValor: autoral ? '' : formatarData(dataFato ?? hoje.toISOString(), pauta.idioma),
-    fonteNome: autoral ? marca.assinatura ?? marca.nome ?? '' : resumo ? tx.variasFontes : nomeDaFonte(fonte),
-    fonteUrl: autoral ? linkDoTexto(pauta) : fonte.fonteUrl,
-    ...(resumo ? { fontesPorFato: Object.fromEntries(pauta.fatos.map((f) => [f.id, { nome: nomeDaFonte(f), url: f.fonteUrl }])) } : {}),
-    fatosDoDocumento: Object.fromEntries(pauta.fatos.map((f) => [f.id, { nome: nomeDaFonte(f), url: f.fonteUrl, data: !autoral && f.dataFato ? formatarData(f.dataFato, pauta.idioma) : null }])),
+    autoral: author, idioma: lead.idioma ?? 'pt-BR', par: pair(brand.fontes),
+    cores: fromRoleColors({ fundo: brand.cores?.fundo ?? '#1f2a24', texto: brand.cores?.texto ?? '#fffcf6', acento: brand.cores?.acento ?? '#b3e9c2' }, lead.estiloParams?.papelCores ?? 'normal'),
+    marcaNome: brand.nome ?? '',
+    editoria: desk,
+    eyebrowCapa: local ? `${desk} · ${local}`.replace(/^ · /, '') : desk,
+    dataLabel: author ? '' : factDate ? tx.ocorrencia : tx.publicacao,
+    dataValor: author ? '' : formatDate(factDate ?? today.toISOString(), lead.idioma),
+    fonteNome: author ? brand.assinatura ?? brand.nome ?? '' : summary ? tx.variasFontes : fromSourceName(source),
+    fonteUrl: author ? fromTextLink(lead) : source.fonteUrl,
+    ...(summary ? { fontesPorFato: Object.fromEntries(lead.fatos.map((f) => [f.id, { nome: fromSourceName(f), url: f.fonteUrl }])) } : {}),
+    fatosDoDocumento: Object.fromEntries(lead.fatos.map((f) => [f.id, { nome: fromSourceName(f), url: f.fonteUrl, data: !author && f.dataFato ? formatDate(f.dataFato, lead.idioma) : null }])),
     rotuloDataFato: tx.ocorrencia,
-    ctaUrl: marca.ctaUrl ?? `https://${marca.dominio ?? 'instagram.com'}`,
-    dominio: marca.dominio ?? marca.handle ?? '',
-    ...(pauta.estiloParams ? { composicao: pauta.estiloParams.composicao, caixaTitulo: pauta.estiloParams.caixaTitulo } : {}),
-    ...(pauta.patrocinador ? { patrocinio: { rotulo: rotuloPublicidade(pauta.idioma), oferecimento: tx.oferecimento, nome: pauta.patrocinador.nome, logo: null } } : {}),
-    ...(pauta.tipoPost === 'publicidade' ? { publicidade: { rotulo: rotuloPublicidade(pauta.idioma), anunciante: pauta.anunciante ?? '' } } : {}),
+    ctaUrl: brand.ctaUrl ?? `https://${brand.dominio ?? 'instagram.com'}`,
+    dominio: brand.dominio ?? brand.handle ?? '',
+    ...(lead.estiloParams ? { composicao: lead.estiloParams.composicao, caixaTitulo: lead.estiloParams.caixaTitulo } : {}),
+    ...(lead.patrocinador ? { patrocinio: { rotulo: advertisingLabel(lead.idioma), oferecimento: tx.oferecimento, nome: lead.patrocinador.nome, logo: null } } : {}),
+    ...(lead.tipoPost === 'publicidade' ? { publicidade: { rotulo: advertisingLabel(lead.idioma), anunciante: lead.anunciante ?? '' } } : {}),
   };
 }
 
-/** A pauta como a peça a vê: com modelo, a marca congelada nele e os parâmetros. Sem modelo, a de hoje. */
-export const pautaDoEstilo = (pauta: Pauta, estilo?: EstiloPeca | null): Pauta =>
-  estilo ? { ...pauta, marca: marcaComCopia(pauta.marca, estilo.marcaVisual), estiloParams: estilo.params, patrocinador: estilo.patrocinador } : pauta;
+/** The lead as the piece sees it: with a template, the brand frozen in it and the parameters. Without one, today's. */
+export const leadStyle = (lead: Lead, style?: PieceStyle | null): Lead =>
+  style ? { ...lead, marca: withCopyBrand(lead.marca, style.marcaVisual), estiloParams: style.params, patrocinador: style.patrocinador } : lead;
 
 /**
- * Variáveis de texto e cor de um card (sem fontes, arte e logo, que o render monta à parte). Veículo `autoral`: o autor
- * é o dono do veículo, então o card não tem rótulo de data nem eyebrow de notícia ("O que aconteceu", "Contexto"; só a
- * editoria, quando há), e o rodapé assina com `marca.assinatura` ligada ao texto, no lugar de "Fonte: <site>".
+ * A card's text and colour variables (without fonts, art and logo, which the render builds separately). `autoral`
+ * outlet: the author owns the outlet, so the card has no date label and no news eyebrow ("What happened", "Context";
+ * only the desk, when there is one), and the footer signs with `marca.assinatura` linked to the text, in place of
+ * "Source: <site>".
  */
-export const varsCard = (pauta: Pauta, card: Card, formato: 'post' | 'carrossel', hoje = new Date()) => varsDoCard(baseDoCard(pauta, hoje), card, formato);
+export const varsCard = (lead: Lead, card: Card, format: 'post' | 'carrossel', today = new Date()) => cardVars(baseCard(lead, today), card, format);
 
-export { listaTag, preencherTemplate };
+export { tagList as listaTag, fillTemplate as preencherTemplate };
 
-/** O HTML de cada card, pronto para o navegador, e o hash dele (decide o que precisa renderizar de novo). */
-export interface CardPreparado { card: CardNormal; indice: number; html: string; hash: string; arte: string | null }
+/** Each card's HTML, ready for the browser, and its hash (it decides what needs rendering again). */
+export interface CardPrepared { card: CardNormal; indice: number; html: string; hash: string; arte: string | null }
 
-export async function prepararCards(env: Env, input: Omit<RenderInput, 'anteriores'>): Promise<CardPreparado[]> {
-  const { rascunho, formato } = input;
-  const pauta = pautaDoEstilo(input.pauta, rascunho.estilo);
-  const marca: Marca = pauta.marca;
-  const cards = formato === 'post' ? normalizarCards(rascunho.cards).slice(0, 1) : normalizarCards(rascunho.cards);
-  if (!cards.length) throw new Error('rascunho sem cards');
+export async function prepareCards(env: Env, input: Omit<RenderInput, 'anteriores'>): Promise<CardPrepared[]> {
+  const { rascunho: draft, formato: format } = input;
+  const lead = leadStyle(input.pauta, draft.estilo);
+  const brand: Brand = lead.marca;
+  const cards = format === 'post' ? normalizeCards(draft.cards).slice(0, 1) : normalizeCards(draft.cards);
+  if (!cards.length) throw new Error('draft has no cards');
 
-  const logo = await dataUri(env, marca.logoR2, 'image/svg+xml');
-  const ilustracao = await dataUri(env, input.ilustracaoR2 ?? null, 'image/png');
-  const artePadrao = ilustracao ?? (await dataUri(env, marca.arteR2, 'image/png'));
-  const fontes = fontesDoPar(parDe(marca.fontes));
-  const base = baseDoCard(pauta);
-  const logoPatrocinio = await dataUri(env, pauta.patrocinador?.logoR2, 'image/png');
-  const saida: CardPreparado[] = [];
+  const logo = await dataUri(env, brand.logoR2, 'image/svg+xml');
+  const illustration = await dataUri(env, input.ilustracaoR2 ?? null, 'image/png');
+  const defaultArt = illustration ?? (await dataUri(env, brand.arteR2, 'image/png'));
+  const sources = fromPairSources(pair(brand.fontes));
+  const base = baseCard(lead);
+  const logoSponsorship = await dataUri(env, lead.patrocinador?.logoR2, 'image/png');
+  const output: CardPrepared[] = [];
   for (const [i, card] of cards.entries()) {
-    // Foto própria (subida pelo editor); senão a ilustração do card, a da peça ou a arte padrão da marca.
-    const foto = card.imagem ? await dataUri(env, card.imagem, 'image/png') : null;
-    const doCard = !foto && card.ilustracao ? await dataUri(env, card.ilustracao, 'image/png') : null;
-    const arte = foto ?? doCard ?? artePadrao;
-    const vars: Record<string, string> = { ...fontes, ...varsCard(pauta, card, formato, input.hoje ? new Date(input.hoje) : undefined), ...(input.quadro ? { FORMAT_CLASS: input.quadro } : {}) };
-    // Tags montadas fora do escape: imagem (ou fundo flat) e logo (ou nome).
+    // Own photo (uploaded by the editor); otherwise the card's illustration, the piece's, or the brand's default art.
+    const photo = card.imagem ? await dataUri(env, card.imagem, 'image/png') : null;
+    const fromCard = !photo && card.ilustracao ? await dataUri(env, card.ilustracao, 'image/png') : null;
+    const art = photo ?? fromCard ?? defaultArt;
+    const vars: Record<string, string> = { ...sources, ...varsCard(lead, card, format, input.hoje ? new Date(input.hoje) : undefined), ...(input.quadro ? { FORMAT_CLASS: input.quadro } : {}) };
+    // Tags built outside escaping: image (or flat background) and logo (or name).
     const raw: Record<string, string> = {
-      ART_TAG: arte
-        ? `<img class="art" src="${arte}" alt="${escape(foto ? textosConteudo(pauta.idioma).fotoDoVeiculo : rascunho.visualBrief?.primary ?? textosConteudo(pauta.idioma).ilustracao)}">`
+      ART_TAG: art
+        ? `<img class="art" src="${art}" alt="${escape(photo ? textsContent(lead.idioma).fotoDoVeiculo : draft.visualBrief?.primary ?? textsContent(lead.idioma).ilustracao)}">`
         : '<div class="art art-flat" aria-hidden="true"></div>',
       BRAND_TAG: logo
-        ? `<img class="brand-mark" src="${logo}" alt="${escape(marca.nome ?? '')}">`
-        : `<span class="brand-name">${escape(marca.nome ?? marca.handle ?? '')}</span>`,
-      LIST_TAG: listaTag(card),
-      ...extrasDoCard(base.patrocinio ? { ...base, patrocinio: { ...base.patrocinio, logo: logoPatrocinio } } : base, card),
+        ? `<img class="brand-mark" src="${logo}" alt="${escape(brand.nome ?? '')}">`
+        : `<span class="brand-name">${escape(brand.nome ?? brand.handle ?? '')}</span>`,
+      LIST_TAG: tagList(card),
+      ...cardExtras(base.patrocinio ? { ...base, patrocinio: { ...base.patrocinio, logo: logoSponsorship } } : base, card),
     };
-    if (input.quadro && !ehConvite(card)) raw.BODY_TEXT = corpoPorFrase(card, vars.BODY_TEXT);
-    // Convite rico: celular com direct de exemplo, destaques e botão, tudo da config do CTA (cardHtml.conviteRico).
-    const cta = ehConvite(card) ? escolherCta(pauta, card.cta) : null;
+    if (input.quadro && !isInvite(card)) raw.BODY_TEXT = perSentenceBody(card, vars.BODY_TEXT);
+    // Rich CTA: a phone with a sample DM, highlights and a button, all from the CTA config (cardHtml.inviteRich).
+    const cta = isInvite(card) ? chooseCta(lead, card.cta) : null;
     let tpl = template;
     if (cta?.telefone) {
       tpl = templateConvite;
-      const rico = conviteRico({ ...cta, telefone: cta.telefone }, marca, parDe(marca.fontes), pauta.idioma);
-      Object.assign(vars, rico.vars, { CTA_URL: cta.url ?? vars.CTA_URL });
-      raw.MESSAGES = rico.mensagens;
+      const rich = inviteRich({ ...cta, telefone: cta.telefone }, brand, pair(brand.fontes), lead.idioma);
+      Object.assign(vars, rich.vars, { CTA_URL: cta.url ?? vars.CTA_URL });
+      raw.MESSAGES = rich.mensagens;
     }
-    // Marca d'água (logo ou @), fora do convite rico (o template dele não tem o lugar).
-    raw.WATERMARK = marcaDaguaTag(marca.marcaDagua, { logo, handle: marca.handle, nome: marca.nome });
-    const html = preencherTemplate(tpl, vars, raw);
-    saida.push({ card, indice: i, html, hash: await sha256(`1080x1350\n${html}`), arte: foto ? null : input.ilustracaoR2 ?? null });
+    // Watermark (logo or @), except on the rich CTA (its template has no spot for it).
+    raw.WATERMARK = waterTagBrand(brand.marcaDagua, { logo, handle: brand.handle, nome: brand.nome });
+    const html = fillTemplate(tpl, vars, raw);
+    output.push({ card, indice: i, html, hash: await sha256(`1080x1350\n${html}`), arte: photo ? null : input.ilustracaoR2 ?? null });
   }
-  return saida;
+  return output;
 }
 
 async function sha256(s: string) {
@@ -199,58 +200,59 @@ async function sha256(s: string) {
   return [...d].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** O mínimo do Playwright que o render usa: os testes trocam por um navegador falso. */
-export type AbrirNavegador = () => Promise<{ newPage: (o: { viewport: { width: number; height: number }; deviceScaleFactor: number }) => Promise<any>; close: () => Promise<void> }>;
-/** Objeto para os testes trocarem (vi.spyOn): o Browser Rendering só existe remoto. */
-export const navegador = { abrir: (env: Env): ReturnType<AbrirNavegador> => launch(env.BROWSER) as never };
+/** The minimal Playwright surface the render uses: tests swap it for a fake browser. */
+export type OpenBrowser = () => Promise<{ newPage: (o: { viewport: { width: number; height: number }; deviceScaleFactor: number }) => Promise<any>; close: () => Promise<void> }>;
+/** Object for tests to swap (vi.spyOn): Browser Rendering only exists remotely. */
+export const browserApi = { abrir: (env: Env): ReturnType<OpenBrowser> => launch(env.BROWSER) as never };
 
 /**
- * Porta de scripts/lib/social/render.mjs: HTML por card → screenshot 1080×1350 no Browser Rendering → R2.
- * Mantém o QA de layout (overflow, sobreposição, fontes, imagens) e a proibição de request externo. Com `anteriores`,
- * card de HTML igual (mesmo hash) reaproveita as chaves da versão anterior; sem nada a renderizar, nem abre o navegador.
+ * Port of scripts/lib/social/render.mjs: HTML per card → 1080×1350 screenshot in Browser Rendering → R2.
+ * Keeps the layout QA (overflow, overlap, fonts, images) and the ban on external requests. With `anteriores`, a card
+ * with identical HTML (same hash) reuses the previous version's keys; with nothing to render, it does not even open the
+ * browser.
  */
-export async function renderizarCards(env: Env, input: RenderInput, abrir: AbrirNavegador = () => navegador.abrir(env)): Promise<ArteRenderizada[]> {
-  const { tenantId, pecaId, versao } = input;
-  const preparados = await prepararCards(env, input);
-  const porHash = new Map((input.anteriores ?? []).filter((a) => a.hash).map((a) => [a.hash!, a]));
-  const saida: (ArteRenderizada | null)[] = preparados.map((p) => {
-    const velha = porHash.get(p.hash);
-    return velha ? { ...velha, papel: rotuloCard(p.card), id: p.card.id, layout: p.card.layout } : null;
+export async function renderCards(env: Env, input: RenderInput, show: OpenBrowser = () => browserApi.abrir(env)): Promise<ArtRendered[]> {
+  const { tenantId, pecaId: pieceId, versao: version } = input;
+  const prepared = await prepareCards(env, input);
+  const perHash = new Map((input.anteriores ?? []).filter((a) => a.hash).map((a) => [a.hash!, a]));
+  const output: (ArtRendered | null)[] = prepared.map((p) => {
+    const old = perHash.get(p.hash);
+    return old ? { ...old, papel: cardLabel(p.card), id: p.card.id, layout: p.card.layout } : null;
   });
-  const faltam = preparados.filter((_, i) => !saida[i]);
-  if (!faltam.length) return saida as ArteRenderizada[];
+  const missing = prepared.filter((_, i) => !output[i]);
+  if (!missing.length) return output as ArtRendered[];
 
-  const prefixo = `artes/${tenantId}/${pecaId}/v${versao}`;
-  const browser = await abrir();
+  const prefix = `artes/${tenantId}/${pieceId}/v${version}`;
+  const browser = await show();
   try {
     const page = await browser.newPage({ viewport: { width: 1080, height: 1350 }, deviceScaleFactor: 1 });
-    const erros: string[] = [];
-    const externos: string[] = [];
-    page.on('pageerror', (e: Error) => erros.push(e.message));
-    page.on('console', (m: { type(): string; text(): string }) => { if (m.type() === 'error') erros.push(m.text()); });
-    await page.route(/^https?:\/\//, async (route: any) => { externos.push(route.request().url()); await route.abort(); });
+    const errors: string[] = [];
+    const external: string[] = [];
+    page.on('pageerror', (e: Error) => errors.push(e.message));
+    page.on('console', (m: { type(): string; text(): string }) => { if (m.type() === 'error') errors.push(m.text()); });
+    await page.route(/^https?:\/\//, async (route: any) => { external.push(route.request().url()); await route.abort(); });
 
-    for (const p of faltam) {
+    for (const p of missing) {
       const { card, indice: i, html } = p;
       await page.setContent(html, { waitUntil: 'load' });
-      const { metricas, ok } = await qaCard(page, { promo: ehConvite(card), altura: ALTURA_CARROSSEL });
-      if (!ok) throw new ErroLayout(card.id, i, metricas, rotuloCard(card));
+      const { metricas: metrics, ok } = await qaCard(page, { promo: isInvite(card), altura: CAROUSEL_HEIGHT });
+      if (!ok) throw new LayoutError(card.id, i, metrics, cardLabel(card));
 
       const el = page.locator('.card');
       const png = await el.screenshot({ type: 'png' });
       const jpg = await el.screenshot({ type: 'jpeg', quality: 95 });
-      // Nome com o id do card: na mesma versão, dois cards nunca disputam a chave (reordenar não sobrescreve).
-      const base = `${prefixo}/${String(i + 1).padStart(2, '0')}-${rotuloCard(card)}${card.id === rotuloCard(card) ? '' : `-${card.id.replace(/[^a-z0-9-]/gi, '').slice(0, 24)}`}${input.chavesPorConteudo ? `-${p.hash.slice(0, 16)}` : ''}`;
+      // Name with the card id: within a version, two cards never compete for a key (reordering does not overwrite).
+      const base = `${prefix}/${String(i + 1).padStart(2, '0')}-${cardLabel(card)}${card.id === cardLabel(card) ? '' : `-${card.id.replace(/[^a-z0-9-]/gi, '').slice(0, 24)}`}${input.chavesPorConteudo ? `-${p.hash.slice(0, 16)}` : ''}`;
       await Promise.all([
         env.MEDIA.put(`${base}.png`, png, { httpMetadata: { contentType: 'image/png' } }),
         env.MEDIA.put(`${base}.jpg`, jpg, { httpMetadata: { contentType: 'image/jpeg' } }),
       ]);
-      saida[i] = { papel: rotuloCard(card), id: card.id, layout: card.layout, png: `${base}.png`, jpg: `${base}.jpg`, hash: p.hash, ...(p.arte ? { arte: p.arte } : {}), metricas };
+      output[i] = { papel: cardLabel(card), id: card.id, layout: card.layout, png: `${base}.png`, jpg: `${base}.jpg`, hash: p.hash, ...(p.arte ? { arte: p.arte } : {}), metricas: metrics };
     }
 
-    if (erros.length || externos.length) throw new Error(`render com erros: ${JSON.stringify({ erros, externos })}`);
+    if (errors.length || external.length) throw new Error(`render with errors: ${JSON.stringify({ erros: errors, externos: external })}`);
   } finally {
     await browser.close();
   }
-  return saida as ArteRenderizada[];
+  return output as ArtRendered[];
 }
