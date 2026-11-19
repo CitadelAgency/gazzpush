@@ -17,6 +17,12 @@
   <img alt="UI: English and Portuguese" src="https://img.shields.io/badge/UI-English%20%7C%20Portugu%C3%AAs-2A2D33">
 </p>
 
+<p align="center">
+  <a href="https://github.com/CitadelAgency/gazzpush/raw/main/docs/media/gazzpush-teaser.mp4">
+    <img src="docs/media/gazzpush-teaser-poster.jpg" alt="Watch the Gazzpush teaser (0:48)" width="820">
+  </a>
+</p>
+
 ---
 
 Gazzpush helps journalists write investigative stories: the kind that have to hold up to an editor, to a lawyer, to a
