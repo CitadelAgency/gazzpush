@@ -50,8 +50,8 @@ export function FormLink({ tenantId, textoId: textId, inicial: initial = "", rot
   );
 }
 
-/** The name of whoever wrote the first opinion, from the block's `fornecedor` (deepseek, gemini, deepseek+anthropic...). */
-export const textName = (provider: string | null | undefined) => (provider?.startsWith("gemini") ? "Gemini" : "DeepSeek");
+/** The name of whoever wrote the first opinion, from the block's `fornecedor` (deepseek, gemini, kie, deepseek+anthropic...). */
+export const textName = (provider: string | null | undefined) => (provider?.startsWith("kie") ? "Kie (Gemini)" : provider?.startsWith("gemini") ? "Gemini" : "DeepSeek");
 
 /**
  * Who checked the paragraph: two opinions, a single one (and why) or the other provider (sensitive topic). `ligar`: the

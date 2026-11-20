@@ -6,15 +6,15 @@
 import type { Env } from '../env';
 import { decryptToken } from './crypto';
 import { DeskError } from './desk';
-import { PROVIDERS_IDS, PROVIDERS, PROVIDERS_IMAGE, PROVIDERS_TEXT, isProvider, type Provider, type ProviderImage, type ProviderText } from './providersTable';
+import { PROVIDERS_IDS, PROVIDERS, PROVIDERS_IMAGE, PROVIDERS_SECOND, PROVIDERS_TEXT, PROVIDERS_TEXT_BYOK, isProvider, type Provider, type ProviderImage, type ProviderSecond, type ProviderText } from './providersTable';
 
 export type KeyOrigin = 'veiculo' | 'servidor';
 export interface UsedKey<P extends Provider = Provider> { provedor: P; chave: string; origem: KeyOrigin }
 export interface OutletKeys {
   texto: UsedKey<ProviderText> | null;
-  segunda: UsedKey<'anthropic'> | null;
+  segunda: UsedKey<ProviderSecond> | null;
   imagem: UsedKey<ProviderImage> | null;
-  escolha: { texto: ProviderText; imagem: ProviderImage };
+  escolha: { texto: ProviderText; segunda: ProviderSecond; imagem: ProviderImage };
 }
 
 const gateway = (env: Env, provider: string) => `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/${provider}`;
@@ -23,6 +23,8 @@ const gateway = (env: Env, provider: string) => `https://gateway.ai.cloudflare.c
 export const baseGemini = (env: Env) => env.GEMINI_URL ? env.GEMINI_URL.replace(/\/$/, '') : env.AI_GATEWAY_ID ? gateway(env, 'google-ai-studio') : 'https://generativelanguage.googleapis.com';
 /** Base for synchronous fal (fal.run): FAL_URL (tests), the AI Gateway or the direct API. */
 export const baseFal = (env: Env) => env.FAL_URL ? env.FAL_URL.replace(/\/$/, '') : env.AI_GATEWAY_ID ? gateway(env, 'fal') : 'https://fal.run';
+/** Kie base: KIE_URL (tests) or the direct API. */
+export const baseKie = (env: Env) => env.KIE_URL ? env.KIE_URL.replace(/\/$/, '') : 'https://api.kie.ai';
 
 export const fromServerKey = (env: Env, p: Provider): string | null => {
   const v = (env as unknown as Record<string, unknown>)[PROVIDERS[p].variavel];
@@ -30,20 +32,24 @@ export const fromServerKey = (env: Env, p: Provider): string | null => {
 };
 
 const choiceText = (v: unknown): ProviderText => ((PROVIDERS_TEXT as readonly string[]).includes(v as string) ? v as ProviderText : 'deepseek');
+const choiceSecond = (v: unknown): ProviderSecond => ((PROVIDERS_SECOND as readonly string[]).includes(v as string) ? v as ProviderSecond : 'anthropic');
 const choiceImage = (v: unknown): ProviderImage => ((PROVIDERS_IMAGE as readonly string[]).includes(v as string) ? v as ProviderImage : 'kie');
 
 /**
  * The outlet's keys, resolved once per operation (the check verifies several blocks with the same object). An outlet
  * that does not exist (tests, a job for a deleted outlet) falls back to the server's keys. A key that does not decrypt
  * (TOKEN_ENC_KEY changed) counts as missing.
+ *
+ * Opt-in rule: Kie.ai is only used for text or second opinion when the outlet explicitly chose it (`provedor_texto = 'kie'`
+ * or `provedor_segunda = 'kie'`). Saving a Kie key for illustrations never silently switches text or second opinion to Kie.
  */
 export async function fromOutletKeys(env: Env, tenantId: string): Promise<OutletKeys> {
   // No outlet (a test request built by hand): server keys only.
   const [t, k] = tenantId ? await env.DB.batch([
-    env.DB.prepare('SELECT provedor_texto, provedor_imagem FROM tenants WHERE id = ?').bind(tenantId),
+    env.DB.prepare('SELECT provedor_texto, provedor_segunda, provedor_imagem FROM tenants WHERE id = ?').bind(tenantId),
     env.DB.prepare('SELECT provedor, chave_enc FROM chaves_ia WHERE tenant_id = ?').bind(tenantId),
   ]) : [{ results: [] }, { results: [] }];
-  const choice = (t.results[0] ?? {}) as { provedor_texto?: string; provedor_imagem?: string };
+  const choice = (t.results[0] ?? {}) as { provedor_texto?: string; provedor_segunda?: string; provedor_imagem?: string };
   const fromOutlet = new Map<Provider, string>();
   for (const r of k.results as { provedor: string; chave_enc: string }[]) {
     if (!isProvider(r.provedor)) continue;
@@ -58,12 +64,14 @@ export async function fromOutletKeys(env: Env, tenantId: string): Promise<Outlet
     for (const p of order) { const c = fromServerKey(env, p); if (c) return { provedor: p, chave: c, origem: 'servidor' }; }
     return null;
   }
-  const text = choiceText(choice.provedor_texto), image = choiceImage(choice.provedor_imagem);
+  const text = choiceText(choice.provedor_texto);
+  const second = choiceSecond(choice.provedor_segunda);
+  const image = choiceImage(choice.provedor_imagem);
   return {
-    texto: resolve([text, ...PROVIDERS_TEXT.filter((p) => p !== text)]),
-    segunda: resolve(['anthropic'] as const),
+    texto: text === 'kie' ? resolve(['kie'] as const) : resolve([text, ...PROVIDERS_TEXT_BYOK.filter((p) => p !== text)]),
+    segunda: second === 'kie' ? resolve(['kie'] as const) : resolve(['anthropic'] as const),
     imagem: resolve([image, ...PROVIDERS_IMAGE.filter((p) => p !== image)]),
-    escolha: { texto: text, imagem: image },
+    escolha: { texto: text, segunda: second, imagem: image },
   };
 }
 
@@ -116,7 +124,7 @@ function checkRequest(env: Env, p: Provider, key: string): { url: string; header
     case 'anthropic':
       return { url: `${env.SEGUNDA_URL ? env.SEGUNDA_URL.replace(/\/$/, '') : 'https://api.anthropic.com'}/v1/models?limit=1`, headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' }, recusa: [401, 403], aceita: [] };
     case 'kie':
-      return { url: `${env.KIE_URL ? env.KIE_URL.replace(/\/$/, '') : 'https://api.kie.ai'}/api/v1/chat/credit`, headers: { authorization: `Bearer ${key}` }, recusa: [401, 403], aceita: [] };
+      return { url: `${baseKie(env)}/api/v1/chat/credit`, headers: { authorization: `Bearer ${key}` }, recusa: [401, 403], aceita: [] };
     case 'fal':
       return {
         url: `${env.FAL_URL ? env.FAL_URL.replace(/\/$/, '') : 'https://queue.fal.run'}/${PROVIDERS.fal.modelo.split('/').slice(0, 2).join('/')}/requests/00000000-0000-0000-0000-000000000000/status`,

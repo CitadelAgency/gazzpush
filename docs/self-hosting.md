@@ -17,8 +17,10 @@ You need:
 - **Node.js 24** and npm.
 - **Docker**, running on the machine you deploy from, if you want Reels. `wrangler deploy` builds the container image
   from `container/reels/Dockerfile` and pushes it to Cloudflare's registry.
-- **At least one text-model key**: DeepSeek or Gemini. Optionally Anthropic (second opinion) and Kie or fal
-  (illustration). Keys can also be added later, per outlet, in the app.
+- **AI model keys**: either bring your own separate keys (DeepSeek or Gemini for text, plus optional Anthropic for
+  second opinion and Kie or fal for illustration) or opt into a single **[Kie.ai](https://kie.ai?ref=6bb5696952ed37a98d23e2af63cbc03c)**
+  key *(affiliate link)* for text, second opinion and illustrations. Keys can be configured per outlet under
+  **Publication › AI keys**.
 
 ## 1. Get the code
 

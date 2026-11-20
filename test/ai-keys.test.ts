@@ -5,6 +5,8 @@ import { env } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decryptToken } from '../src/lib/crypto';
 import { fromOutletKeys } from '../src/lib/providers';
+import { fromKeyLink } from '../src/lib/providersTable';
+import { callSecond } from '../src/lib/secondOpinion';
 import { callText } from '../src/lib/textModel';
 import { panelUsage } from '../src/lib/usage';
 import { register, req, seedMember, seedLead, seedTenant } from './helpers';
@@ -17,7 +19,11 @@ let check = 200;
 
 const answerText = (url: string) => url.includes('generateContent')
   ? Response.json({ candidates: [{ content: { parts: [{ text: '{"ok":"gemini"}' }] }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 100, cachedContentTokenCount: 400, thoughtsTokenCount: 50 } })
-  : Response.json({ choices: [{ message: { content: '{"ok":"deepseek"}' } }], usage: { prompt_tokens: 1000, completion_tokens: 200 } });
+  : url.includes('/anthropic/v1/messages')
+    ? Response.json({ id: 'msg_kie', type: 'message', role: 'assistant', model: 'claude-opus-5-5', stop_reason: 'end_turn', stop_sequence: null, content: [{ type: 'text', text: '{"afirmacoes":[]}' }], usage: { input_tokens: 300, output_tokens: 90, cache_read_input_tokens: 100, cache_creation_input_tokens: 0 } })
+    : url.includes('gemini-3-8-flash-openai')
+      ? Response.json({ choices: [{ message: { content: '{"ok":"kie"}' } }], usage: { prompt_tokens: 1000, completion_tokens: 120, prompt_tokens_details: { cached_tokens: 200 } } })
+      : Response.json({ choices: [{ message: { content: '{"ok":"deepseek"}' } }], usage: { prompt_tokens: 1000, completion_tokens: 200 } });
 
 beforeEach(async () => {
   requests = [];
@@ -34,7 +40,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   const e = env as unknown as Record<string, unknown>;
   e.DEEPSEEK_API_KEY = 'sk-teste';
-  for (const k of ['ANTHROPIC_API_KEY', 'GEMINI_API_KEY', 'INSTALACAO_PROPRIA', 'ADMIN_USER_IDS']) delete e[k];
+  for (const k of ['ANTHROPIC_API_KEY', 'GEMINI_API_KEY', 'KIE_API_KEY', 'INSTALACAO_PROPRIA', 'ADMIN_USER_IDS']) delete e[k];
 });
 
 async function outlet(role: 'admin' | 'editor' = 'admin') {
@@ -206,7 +212,95 @@ describe('provider choice', () => {
     (env as unknown as Record<string, unknown>).GEMINI_API_KEY = 'chave-gemini-do-servidor';
     const ok = await req(v.url, { method: 'PATCH', cookie: v.s.cookie, body: { texto: 'gemini' } });
     expect(ok.status).toBe(200);
-    expect(await ok.json()).toMatchObject({ escolha: { texto: 'gemini', imagem: 'kie' }, emUso: { texto: { provedor: 'gemini', origem: 'servidor' } } });
+    expect(await ok.json()).toMatchObject({ escolha: { texto: 'gemini', segunda: 'anthropic', imagem: 'kie' }, emUso: { texto: { provedor: 'gemini', origem: 'servidor' } } });
+  });
+});
+
+describe('Kie.ai all-in-one (opt-in)', () => {
+  it('exposes the affiliate link with disclosure flag', () => {
+    expect(fromKeyLink('kie')).toEqual({ url: 'https://kie.ai?ref=6bb5696952ed37a98d23e2af63cbc03c', afiliado: true });
+    expect(fromKeyLink('deepseek').afiliado).toBe(false);
+  });
+
+  it('saving a Kie key does NOT switch text or second opinion until the outlet explicitly chooses Kie', async () => {
+    const v = await outlet();
+    delete (env as unknown as Record<string, unknown>).DEEPSEEK_API_KEY;
+    await v.salvar('kie');
+    // Kie key is saved for illustrations, but BYOK defaults stay untouched until explicitly opted in.
+    const before = await fromOutletKeys(env, v.t);
+    expect(before.escolha).toEqual({ texto: 'deepseek', segunda: 'anthropic', imagem: 'kie' });
+    expect(before.texto).toBeNull();
+    expect(before.segunda).toBeNull();
+    expect(before.imagem).toMatchObject({ provedor: 'kie', origem: 'veiculo' });
+
+    // Server KIE_API_KEY also never auto-enables text or second opinion.
+    (env as unknown as Record<string, unknown>).KIE_API_KEY = 'kie-do-servidor-0123456789';
+    expect((await fromOutletKeys(env, 'nao-existe')).texto).toBeNull();
+    expect((await fromOutletKeys(env, 'nao-existe')).segunda).toBeNull();
+
+    // Explicit opt-in switches all three roles to Kie.
+    const optIn = await req(v.url, { method: 'PATCH', cookie: v.s.cookie, body: { texto: 'kie', segunda: 'kie', imagem: 'kie' } });
+    expect(optIn.status).toBe(200);
+    expect(await optIn.json()).toMatchObject({
+      escolha: { texto: 'kie', segunda: 'kie', imagem: 'kie' },
+      emUso: {
+        texto: { provedor: 'kie', origem: 'veiculo' },
+        segunda: { provedor: 'kie', origem: 'veiculo' },
+        imagem: { provedor: 'kie', origem: 'veiculo' },
+      },
+    });
+
+    // Switching second opinion back to Anthropic (BYOK) works even without an Anthropic key (turns second opinion off).
+    const revert = await req(v.url, { method: 'PATCH', cookie: v.s.cookie, body: { segunda: 'anthropic' } });
+    expect(revert.status).toBe(200);
+    expect(await revert.json()).toMatchObject({ escolha: { segunda: 'anthropic' }, emUso: { segunda: null } });
+  });
+
+  it('requires a Kie key before opting in and rejects invalid segunda values', async () => {
+    const v = await outlet();
+    expect((await req(v.url, { method: 'PATCH', cookie: v.s.cookie, body: { segunda: 'deepseek' } })).status).toBe(400);
+    const noKey = await req(v.url, { method: 'PATCH', cookie: v.s.cookie, body: { texto: 'kie', segunda: 'kie', imagem: 'kie' } });
+    expect(noKey.status).toBe(409);
+    expect(await noKey.json()).toMatchObject({ code: 'sem_chave' });
+  });
+
+  it('routes callText and callSecond through Kie.ai with Bearer auth and records usage', async () => {
+    const v = await outlet();
+    await v.salvar('kie');
+    await req(v.url, { method: 'PATCH', cookie: v.s.cookie, body: { texto: 'kie', segunda: 'kie', imagem: 'kie' } });
+
+    const t = await callText(env, { tenantId: v.t, funcao: 'conferencia' }, 'sistema', 'pedido', 0);
+    expect(t).toMatchObject({ json: { ok: 'kie' }, provedor: 'kie', modelo: 'gemini-3-8-flash' });
+    const textReq = requests.at(-1)!;
+    expect(textReq.url).toBe('https://kie.example/gemini-3-8-flash-openai/v1/chat/completions');
+    expect(textReq.headers.get('authorization')).toBe(`Bearer ${KEY}`);
+    expect(JSON.parse(textReq.corpo)).toMatchObject({
+      messages: [{ role: 'system', content: 'sistema' }, { role: 'user', content: 'pedido' }],
+      response_format: { type: 'json_object' },
+      stream: false,
+    });
+
+    const s = await callSecond(env, { tenantId: v.t, funcao: 'conferencia' }, 'sistema', 'prefixo', 'bloco');
+    expect(s.json).toEqual({ afirmacoes: [] });
+    const secReq = requests.at(-1)!;
+    expect(secReq.url).toBe('https://kie.example/anthropic/v1/messages');
+    expect(secReq.headers.get('authorization')).toBe(`Bearer ${KEY}`);
+    expect(secReq.headers.get('anthropic-beta')).toBeNull();
+
+    const { results } = await env.DB.prepare('SELECT modelo, entrada, saida, cache_lido, chave FROM uso_modelo WHERE tenant_id = ? ORDER BY id')
+      .bind(v.t).all<Record<string, unknown>>();
+    expect(results).toEqual([
+      { modelo: 'gemini-3-8-flash', entrada: 800, saida: 120, cache_lido: 200, chave: 'veiculo' },
+      { modelo: 'claude-opus-5-5', entrada: 300, saida: 90, cache_lido: 100, chave: 'veiculo' },
+    ]);
+  });
+
+  it('rejects Kie HTTP 200 soft errors without leaking provider messages', async () => {
+    const v = await outlet();
+    await v.salvar('kie');
+    await req(v.url, { method: 'PATCH', cookie: v.s.cookie, body: { texto: 'kie' } });
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 402, msg: `insufficient credit for ${KEY}` })));
+    await expect(callText(env, { tenantId: v.t, funcao: 'post' }, 's', 'u')).rejects.toThrow('kie text refused: code 402');
   });
 });
 

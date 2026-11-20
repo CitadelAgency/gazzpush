@@ -1,22 +1,26 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Env } from '../env';
-import { fromOutletKeys, type OutletKeys } from './providers';
+import { unwrapJson } from './kieText';
+import { baseKie, fromOutletKeys, type OutletKeys } from './providers';
 import { PRICES_CLAUDE, PROVIDERS } from './providersTable';
 import { recordUsage, type WhereUsage } from './usage';
 
 /**
- * Second check provider (Anthropic, through the AI Gateway): checks on its own the topic text that Chinese models soften
- * (topic bias) and gives the second opinion on legal risk and accusations. Without the outlet's or the server's Anthropic
- * key (`ANTHROPIC_API_KEY`), it is off: the check carries on with a single opinion and the screen says so.
- * `SEGUNDA_MODELO` swaps the model (default: Claude Opus 5.5); `SEGUNDA_URL` swaps the address (e2e points it at the
- * local fake model).
+ * Second check provider (Claude — direct through Anthropic/AI Gateway, or through Kie.ai when the outlet explicitly
+ * opts into Kie for everything): checks on its own the topic text that Chinese models soften (topic bias) and gives
+ * the second opinion on legal risk and accusations. Without a configured second-opinion key, it is off: the check
+ * carries on with a single opinion and the screen says so.
+ * `SEGUNDA_MODELO` swaps the model (default: Claude Opus 5.5); `SEGUNDA_URL` swaps the Anthropic address (e2e points
+ * it at the local fake model); `KIE_URL` swaps Kie's base in tests.
  */
 export const secondOn = (keys: OutletKeys) => !!keys.segunda;
 export const secondModel = (env: Env) => env.SEGUNDA_MODELO || PROVIDERS.anthropic.modelo;
 
-const baseSecond = (env: Env) => env.SEGUNDA_URL ? env.SEGUNDA_URL : env.AI_GATEWAY_ID
-  ? `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/anthropic`
-  : undefined;
+const baseSecond = (env: Env, provider: 'anthropic' | 'kie') => provider === 'kie'
+  ? `${baseKie(env)}/anthropic`
+  : env.SEGUNDA_URL ? env.SEGUNDA_URL : env.AI_GATEWAY_ID
+    ? `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/anthropic`
+    : undefined;
 
 /** The same shape DeepSeek returns (resolveCheck checks each passage by code the same way). */
 const SCHEMA = {
@@ -57,12 +61,12 @@ export async function callSecond(env: Env, where: WhereUsage, system: string, pr
   const key = (where.chaves ?? await fromOutletKeys(env, where.tenantId)).segunda;
   if (!key) throw new SecondError('sem chave');
   const client = new Anthropic({
-    apiKey: key.chave, baseURL: baseSecond(env), maxRetries: 1, timeout: 90_000,
+    apiKey: key.chave, baseURL: baseSecond(env, key.provedor), maxRetries: 1, timeout: 90_000,
     // The fetch at call time (tests swap the global).
     fetch: (input, init) => globalThis.fetch(input, init),
   });
-  // Opus and Sonnet: a classifier refusal is retried on the model Anthropic indicates for the category.
-  const fallback = /opus|sonnet/.test(model);
+  // Opus and Sonnet (direct Anthropic): a classifier refusal is retried on the model Anthropic indicates for the category.
+  const fallback = key.provedor === 'anthropic' && /opus|sonnet/.test(model);
   let r: Anthropic.Beta.BetaMessage;
   try {
     r = await client.beta.messages.create({
@@ -75,7 +79,7 @@ export async function callSecond(env: Env, where: WhereUsage, system: string, pr
     });
   } catch (e) {
     // Status only: the provider's message can echo part of the key.
-    if (e instanceof Anthropic.APIError) throw new SecondError(`anthropic ${e.status ?? 'sem resposta'}`);
+    if (e instanceof Anthropic.APIError) throw new SecondError(`${key.provedor} ${e.status ?? 'sem resposta'}`);
     throw e;
   }
   const u = r.usage;
@@ -87,7 +91,7 @@ export async function callSecond(env: Env, where: WhereUsage, system: string, pr
   const text = r.content.find((b) => b.type === 'text');
   if (!text || text.type !== 'text') throw new SecondError('sem texto');
   try {
-    return { json: JSON.parse(text.text), custoUsd: costUsd, uso: usage };
+    return { json: JSON.parse(unwrapJson(text.text)), custoUsd: costUsd, uso: usage };
   } catch {
     throw new SecondError('json inválido');
   }

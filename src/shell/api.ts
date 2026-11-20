@@ -13,7 +13,7 @@ import { MAX_ILLUSTRATIONS_CARD, illustrateCard, illustrationsCard, pieceCapUsd 
 import type { Draft } from '../lib/drafting';
 import { signMedia, encryptToken } from '../lib/crypto';
 import { KEY_MAX, KEY_MIN, checkKey, keysState, hasKey } from '../lib/providers';
-import { PROVIDERS, PROVIDERS_IMAGE, PROVIDERS_TEXT, isProvider, type Provider } from '../lib/providersTable';
+import { PROVIDERS, PROVIDERS_IMAGE, PROVIDERS_SECOND, PROVIDERS_TEXT, isProvider, type Provider } from '../lib/providersTable';
 import { loadAccount, packagePublication } from '../lib/publish';
 import type { ArtRendered } from '../lib/render';
 import {
@@ -1151,19 +1151,22 @@ export const api = new Hono<AppEnv>()
   ]);
   return c.json(await keysState(c.env, tenantId));
 })
-// The text choice (DeepSeek or Gemini) and the illustration choice (Kie or fal). Only a provider with a key (the outlet's or the server's).
+// The text (DeepSeek, Gemini or Kie), second-opinion (Anthropic or Kie) and illustration (Kie or fal) choices.
+// Only a provider with a key (the outlet's or the server's) can be chosen.
 .patch('/t/:tenantId/chaves-ia', requireMember('admin'), async (c) => {
   const tenantId = c.get('tenant').id;
-  const b = await readJson<{ texto?: unknown; imagem?: unknown }>(c);
+  const b = await readJson<{ texto?: unknown; segunda?: unknown; imagem?: unknown }>(c);
   if (b.texto !== undefined && !belongs(PROVIDERS_TEXT, b.texto)) return c.json({ erro: `texto: ${PROVIDERS_TEXT.join(' | ')}` }, 400);
+  if (b.segunda !== undefined && !belongs(PROVIDERS_SECOND, b.segunda)) return c.json({ erro: `segunda: ${PROVIDERS_SECOND.join(' | ')}` }, 400);
   if (b.imagem !== undefined && !belongs(PROVIDERS_IMAGE, b.imagem)) return c.json({ erro: `imagem: ${PROVIDERS_IMAGE.join(' | ')}` }, 400);
-  for (const p of [b.texto, b.imagem].filter((x) => x !== undefined) as Provider[]) {
+  const required = [b.texto, b.segunda === 'kie' ? 'kie' : undefined, b.imagem].filter((x) => x !== undefined) as Provider[];
+  for (const p of new Set(required)) {
     if (!(await hasKey(c.env, tenantId, p))) {
       return c.json({ erro: t(c, `Salve a chave do ${PROVIDERS[p].nome} antes de escolher.`, `Save the ${PROVIDERS[p].nome} key before choosing it.`), code: 'sem_chave' }, 409);
     }
   }
-  await c.env.DB.prepare('UPDATE tenants SET provedor_texto = COALESCE(?, provedor_texto), provedor_imagem = COALESCE(?, provedor_imagem) WHERE id = ?')
-    .bind(b.texto ?? null, b.imagem ?? null, tenantId).run();
+  await c.env.DB.prepare('UPDATE tenants SET provedor_texto = COALESCE(?, provedor_texto), provedor_segunda = COALESCE(?, provedor_segunda), provedor_imagem = COALESCE(?, provedor_imagem) WHERE id = ?')
+    .bind(b.texto ?? null, b.segunda ?? null, b.imagem ?? null, tenantId).run();
   return c.json(await keysState(c.env, tenantId));
 })
 .post('/t/:tenantId/estilos/copiar', requireMember('admin'), async (c) => {

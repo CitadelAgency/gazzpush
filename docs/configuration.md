@@ -40,18 +40,24 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 
 ## AI providers
 
-Each outlet can bring its own keys under **Publication › AI keys**, stored encrypted with `TOKEN_ENC_KEY`. A server key is a
-fallback for outlets without their own; when you set one, every outlet that has no key of its own spends from your
-account. Leave server keys empty if each outlet should pay for its own usage. Providers, model ids and prices are
-defined in one place: [`src/lib/providersTable.ts`](../src/lib/providersTable.ts).
+Each outlet can bring its own keys under **Publication › AI keys**, stored encrypted with `TOKEN_ENC_KEY`. Outlets can
+choose between **separate keys (BYOK)** — DeepSeek or Gemini for text, Anthropic for second opinion, Kie or fal for
+illustrations — or **one key for everything via [Kie.ai](https://kie.ai?ref=6bb5696952ed37a98d23e2af63cbc03c)** *(affiliate
+link)*, which routes text (Gemini Flash), second opinion (Claude) and illustrations (Grok Imagine) through a single
+`KIE_API_KEY`. Kie.ai is strictly opt-in for text and second opinion: nothing switches unless the admin explicitly
+chooses it.
+
+A server key is a fallback for outlets without their own; when you set one, every outlet that has no key of its own
+spends from your account. Leave server keys empty if each outlet should pay for its own usage. Providers, model ids and
+prices are defined in one place: [`src/lib/providersTable.ts`](../src/lib/providersTable.ts).
 
 | Variable | Role | Without it |
 |---|---|---|
-| `DEEPSEEK_API_KEY` | Text: drafting, claim checking, document Q&A | Use Gemini, or an outlet key |
-| `GEMINI_API_KEY` | Text, as an alternative to DeepSeek | Use DeepSeek, or an outlet key |
-| `ANTHROPIC_API_KEY` | Second opinion on risky paragraphs and topic routing in the story desk | Checking runs with one opinion, and the UI says so |
+| `DEEPSEEK_API_KEY` | Text: drafting, claim checking, document Q&A | Use Gemini, opt into Kie.ai, or add an outlet key |
+| `GEMINI_API_KEY` | Text, as an alternative to DeepSeek | Use DeepSeek, opt into Kie.ai, or add an outlet key |
+| `ANTHROPIC_API_KEY` | Second opinion on risky paragraphs and topic routing in the story desk | Checking runs with one opinion (unless the outlet opts into Kie.ai), and the UI says so |
 | `SEGUNDA_MODELO` | Model for the second opinion. Default `claude-opus-5-5`; `claude-haiku-5-5` is much cheaper | Default model |
-| `KIE_API_KEY` | Illustration through Kie (the outlet picks Kie or fal) | Illustrations come from Workers AI (FLUX schnell), with the style described in text |
+| `KIE_API_KEY` | Illustration through Kie (and optionally text + second opinion when the outlet explicitly opts in under **AI keys**) | Illustrations come from Workers AI (FLUX schnell), with the style described in text |
 | `FAL_KEY` | Illustration through fal, as an alternative to Kie | As above |
 
 Workers AI (`AI` binding) handles triage, Whisper transcription, embeddings and vision. It has no key: usage is billed

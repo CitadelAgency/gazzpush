@@ -100,12 +100,13 @@ export async function uploadModel() {
   server = createServer((req, res) => {
     if (req.method === "GET" && req.url === "/chamadas") { res.setHeader("content-type", "application/json"); res.end(JSON.stringify(calls)); return; }
     if (req.method === "POST" && req.url === "/zerar") { calls = []; res.end("{}"); return; }
-    // Key check: model list (DeepSeek, Gemini, Anthropic) and the status of a fal request that does not exist.
-    if (req.method === "GET" && /^\/(models|gemini\/v1beta\/models|anthropic\/v1\/models|fal\/.+\/status)(\?|$)/.test(req.url ?? "")) {
+    // Key check: model list (DeepSeek, Gemini, Anthropic), Kie credit balance and the status of a fal request that does not exist.
+    if (req.method === "GET" && /^\/(models|gemini\/v1beta\/models|anthropic\/v1\/models|api\/v1\/chat\/credit|fal\/.+\/status)(\?|$)/.test(req.url ?? "")) {
       const key = String(req.headers.authorization ?? req.headers["x-goog-api-key"] ?? req.headers["x-api-key"] ?? "");
       res.setHeader("content-type", "application/json");
       if (key.includes("recusada")) { res.statusCode = 401; res.end('{"error":"invalid key"}'); return; }
       if (req.url?.startsWith("/fal/")) { res.statusCode = 404; res.end('{"detail":"request not found"}'); return; }
+      if (req.url?.startsWith("/api/v1/chat/credit")) { res.end('{"code":200,"data":100}'); return; }
       res.end('{"data":[],"models":[]}');
       return;
     }

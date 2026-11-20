@@ -209,9 +209,11 @@ npm run web:build          # build the React app into web/dist
 npm run dev -- --local     # http://localhost:8787
 ```
 
-Open <http://localhost:8787>, create the first account and then your first outlet. To draft and check text you need a
-text-model key, either in `.dev.vars` (`DEEPSEEK_API_KEY` or `GEMINI_API_KEY`) or per outlet under
-**Publication › AI keys**. See [docs/development.md](docs/development.md) for the full development loop and tests.
+Open <http://localhost:8787>, create the first account and then your first outlet. To draft and check text you need an
+AI key, either in `.dev.vars` (`DEEPSEEK_API_KEY` or `GEMINI_API_KEY`) or per outlet under **Publication › AI keys** —
+where you can bring your own keys separately (BYOK) or opt into one **[Kie.ai](https://kie.ai?ref=6bb5696952ed37a98d23e2af63cbc03c)**
+key *(affiliate link)* for text, second opinion and illustrations. See [docs/development.md](docs/development.md) for
+the full development loop and tests.
 
 ## Deploy to your Cloudflare account
 

@@ -1,9 +1,9 @@
 // The AI providers an outlet can pay for with its own key, with nothing server-side: the AI keys tab imports from here.
 // Model id, price, server variable and the link to get a key live only here: switching models is changing one line.
 // `afiliado`: an affiliate link, when there is a programme; with it, the screen uses this link and says "affiliate link"
-// next to it. None of the five has a confirmed programme (17/11/2026), so they all start without one.
+// next to it.
 
-/** What the provider does in the app. Text and image have two providers for the outlet to choose from; second opinion, one. */
+/** What the provider does in the app. Text, second opinion and image can each be set per outlet (including one-key Kie.ai). */
 export type FunctionAi = 'texto' | 'segunda' | 'imagem';
 
 export const PROVIDERS = {
@@ -27,11 +27,11 @@ export const PROVIDERS = {
     link: 'https://console.anthropic.com/settings/keys', afiliado: null,
     modelo: 'claude-opus-5-5', preco: null,
   },
-  // Grok image-edit through Kie: the cost comes in credits; the reserve is the typical cost of one image, used for the
-  // piece's cap and when Kie does not report credits.
+  // Kie.ai: Grok image-edit by default, and optionally text (Gemini Flash) + second opinion (Claude) when the outlet
+  // explicitly chooses Kie for everything. The credit reserve is the typical cost of one image.
   kie: {
     nome: 'Kie', funcao: 'imagem', variavel: 'KIE_API_KEY',
-    link: 'https://kie.ai/api-key', afiliado: null,
+    link: 'https://kie.ai/api-key', afiliado: 'https://kie.ai?ref=6bb5696952ed37a98d23e2af63cbc03c',
     modelo: 'grok-imagine-image-2-0/image-edit', preco: { creditoUsd: 0.005, imagemUsd: 0.02 },
   },
   // The same Grok Imagine edit, on fal (fal.ai/models/xai/grok-imagine-image/edit: US$ 0.022 per image, 17/11/2026).
@@ -42,14 +42,25 @@ export const PROVIDERS = {
   },
 } as const satisfies Record<string, { nome: string; funcao: FunctionAi; variavel: string; link: string; afiliado: string | null; modelo: string; preco: unknown }>;
 
+/** Text model used when an outlet explicitly opts into Kie.ai for text (OpenAI-compatible Gemini Flash route on Kie). */
+export const KIE_TEXT = {
+  modelo: 'gemini-3-8-flash',
+  rota: 'gemini-3-8-flash-openai',
+  preco: { entrada: 0.3, cacheLido: 0.03, saida: 2.5 },
+} as const;
+
 export type Provider = keyof typeof PROVIDERS;
 export const PROVIDERS_IDS = Object.keys(PROVIDERS) as Provider[];
-export const PROVIDERS_TEXT = ['deepseek', 'gemini'] as const satisfies readonly Provider[];
+export const PROVIDERS_TEXT_BYOK = ['deepseek', 'gemini'] as const satisfies readonly Provider[];
+export const PROVIDERS_TEXT = ['deepseek', 'gemini', 'kie'] as const satisfies readonly Provider[];
+export const PROVIDERS_SECOND = ['anthropic', 'kie'] as const satisfies readonly Provider[];
 export const PROVIDERS_IMAGE = ['kie', 'fal'] as const satisfies readonly Provider[];
 export type ProviderText = (typeof PROVIDERS_TEXT)[number];
+export type ProviderSecond = (typeof PROVIDERS_SECOND)[number];
 export type ProviderImage = (typeof PROVIDERS_IMAGE)[number];
 
 export const isProvider = (v: unknown): v is Provider => typeof v === 'string' && Object.hasOwn(PROVIDERS, v);
+export const textModelName = (p: ProviderText) => (p === 'kie' ? KIE_TEXT.modelo : PROVIDERS[p].modelo);
 
 /** Claude, US$ per million tokens: input, output, cache read, cache write (5 min). */
 export const PRICES_CLAUDE: Record<string, [number, number, number, number]> = {
