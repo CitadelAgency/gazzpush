@@ -43,7 +43,7 @@
     "dev:e2e": "wrangler dev --local-upstream localhost:8787 --var DEEPSEEK_URL:http://127.0.0.1:8789/chat/completions --var SEGUNDA_URL:http://127.0.0.1:8789/anthropic --var ANTHROPIC_API_KEY:chave-falsa-do-e2e --var GEMINI_URL:http://127.0.0.1:8789/gemini --var FAL_URL:http://127.0.0.1:8789/fal --var TSA_URL:http://127.0.0.1:8789/tsa --var TSA_RAIZ:MIIBTDCB9KADAgECAgEBMAoGCCqGSM49BAMCMB4xHDAaBgNVBAMME1JhaXogZmFsc2EgZGUgdGVzdGUwHhcNMjYwMTAxMDAwMDAwWhcNNDUxMjMxMDAwMDAwWjAeMRwwGgYDVQQDDBNSYWl6IGZhbHNhIGRlIHRlc3RlMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEJagPnp3GDe5TXpwnNDZ2O08Qv94U667YG0VCDGprH+rVjsrHiAAoS5J3/uHiTYbvZYpKykU38MIS98X+QtFQDaMjMCEwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAQYwCgYIKoZIzj0EAwIDRwAwRAIgN8fKTtImXr9nOiO2xEsI9UjI5AdqLt0DirQJLQRhVLECICdJ/bkSPcy3+5AQNNKwaXAlZc4cF2tj3ok5lcPX/S0L --var WAYBACK_URL:http://127.0.0.1:8789/wayback --var BUSCA_VETORIAL:desligada --var WHISPER_URL:http://127.0.0.1:8789/whisper --var DATAJUD_URL:http://127.0.0.1:8789/datajud --var STRIPE_URL:http://127.0.0.1:8789/stripe --var STRIPE_SECRET_KEY:chave-falsa-do-e2e --var STRIPE_WEBHOOK_SECRET:segredo-falso-do-e2e --var STRIPE_PRECO_PAGINA:price_pagina --var STRIPE_PRECO_PORTAL:price_portal"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.4.0",
+    "@anthropic-ai/sdk": "^1.12.0",
     "@cloudflare/containers": "^0.3.7",
     "@cloudflare/playwright": "^1.4.0",
     "@mozilla/readability": "^0.6.0",
